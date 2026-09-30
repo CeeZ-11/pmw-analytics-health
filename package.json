@@ -1,0 +1,27 @@
+{
+  "name": "pmw-analytics-health",
+  "version": "0.1.0",
+  "description": "PMW Analytics Health Dashboard — static GitHub Pages frontend that displays GA4/GTM tracking health results produced by the n8n monitoring automation",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "prettier": "^3.5.1",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.0",
+    "vitest": "^3.2.4"
+  }
+}
