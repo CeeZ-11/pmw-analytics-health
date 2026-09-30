@@ -102,8 +102,8 @@ Build the four read-only webhooks described in
 ```
 GET /health-summary
 GET /sites
-GET /sites/:id
-GET /sites/:id/history?days=N
+GET /site?id={siteId}
+GET /site-history?id={siteId}&days={N}
 ```
 
 Then set `VITE_DATA_SOURCE=api` and `VITE_API_BASE_URL`. No frontend code changes.

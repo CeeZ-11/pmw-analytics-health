@@ -27,6 +27,21 @@ GitHub Pages ──GET JSON──► n8n webhooks ──► GA4 Data API / crawl
 The app appends the paths below to `VITE_API_BASE_URL`. All endpoint paths
 are defined in one place: `ENDPOINTS` in `src/services/apiProvider.ts`.
 
+## Current n8n setup
+
+Instance: `https://rentvine.app.n8n.cloud` · project: personal (Seamor Estrabon) · folder **PMW Analytics Health**
+
+| Piece                                                | What it is                                                                                                                                                                                                            |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Data table `pmw_health_sites`                        | One row per site: `siteId`, `name`, `status`, `lastChecked`, `isSample`, and the JSON the API serves (`summaryJson`, `detailJson`, `historyJson`). The monitoring workflow should upsert into this table on `siteId`. |
+| Workflow **PMW Analytics Health — Dashboard API**    | The four GET webhooks below, published. CORS: `https://ceez-11.github.io` + localhost dev ports.                                                                                                                      |
+| Workflow **PMW Analytics Health — Seed sample data** | Manual run: writes 25 fictional sites with `isSample = true`. Delete those rows once real monitoring data exists.                                                                                                     |
+
+Base URL: `https://rentvine.app.n8n.cloud/webhook/pmw-analytics-health`
+
+`isSample` (optional, on the summary and on each site) keeps the dashboard's
+"Sample data" labelling while seed rows are being served.
+
 ## General rules
 
 - `GET` only, `Accept: application/json`. The dashboard sends **no
@@ -117,7 +132,7 @@ One row per monitored site (the dashboard table). Array of `SiteSummary`.
 `issueCategories` / `hasConversionIssue` power the dashboard's
 Tracking / Analytics / Data quality / Conversion filters.
 
-## `GET /sites/:id`
+## `GET /site?id={siteId}`
 
 Everything in `SiteSummary`, plus:
 
@@ -170,7 +185,7 @@ Everything in `SiteSummary`, plus:
 - `last24h` is `null` when GA4 couldn't be queried; `count24h` is `null` likewise.
 - `issues` are the **open** issues. `comparison` is optional.
 
-## `GET /sites/:id/history?days=N`
+## `GET /site-history?id={siteId}&days={N}`
 
 `N` is one of 7, 14, 30, 90.
 

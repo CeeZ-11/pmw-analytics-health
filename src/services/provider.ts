@@ -6,8 +6,8 @@ import type { HealthSummary, SiteDetail, SiteHistory, SiteSummary } from '../typ
  *
  *    GET /health-summary       → getHealthSummary()
  *    GET /sites                → getSites()
- *    GET /sites/:id            → getSite(id)
- *    GET /sites/:id/history    → getSiteHistory(id, days)
+ *    GET /site?id=…                → getSite(id)
+ *    GET /site-history?id=…&days=N → getSiteHistory(id, days)
  */
 export interface HealthDataProvider {
   readonly kind: 'mock' | 'api';

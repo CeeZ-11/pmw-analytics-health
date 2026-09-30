@@ -16,9 +16,11 @@ import { assertHistory, assertSiteDetail, assertSites, assertSummary, unwrap } f
 export const ENDPOINTS = {
   healthSummary: () => '/health-summary',
   sites: () => '/sites',
-  site: (id: string) => `/sites/${encodeURIComponent(id)}`,
+  // Query parameters rather than /sites/:id — n8n prepends a random webhook
+  // ID to any path containing a ":param", which would break a shared base URL.
+  site: (id: string) => `/site?id=${encodeURIComponent(id)}`,
   siteHistory: (id: string, days: number) =>
-    `/sites/${encodeURIComponent(id)}/history?days=${encodeURIComponent(String(days))}`,
+    `/site-history?id=${encodeURIComponent(id)}&days=${encodeURIComponent(String(days))}`,
 } as const;
 
 export function createApiProvider(

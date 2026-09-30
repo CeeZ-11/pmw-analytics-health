@@ -18,7 +18,7 @@ import {
 import { href, replaceHash } from '../lib/router';
 import { checkIcon, STATUS_META, statusBadge } from '../lib/status';
 import { errorState, initials, loading, pageHead, sampleNotice } from '../components/ui';
-import { setLastRun, type ViewContext } from './context';
+import { setLastRun, setSamplePill, type ViewContext } from './context';
 
 interface DashData {
   summary: HealthSummary;
@@ -54,6 +54,7 @@ export async function renderDashboard(ctx: ViewContext, params: URLSearchParams)
   }
   if (!ctx.isCurrent()) return;
   setLastRun(data.summary.lastRunAt);
+  setSamplePill(!!data.summary.isSample);
   const query = parseQuery(params);
   paint(ctx, data, query);
 }
@@ -67,7 +68,7 @@ function paint(ctx: ViewContext, data: DashData, query: SiteQuery) {
       'Which PMW sites are healthy, which have tracking or data issues, and which need attention.',
       `<button class="btn btn-ghost" id="refresh" title="Reload results from ${analyticsHealth.source === 'mock' ? 'sample data' : 'n8n'}">${ICONS.refresh}Refresh</button>`,
     )}
-    ${sampleNotice(analyticsHealth.source)}
+    ${sampleNotice(analyticsHealth.source, !!summary.isSample)}
     <div class="stats" id="stats"></div>
     ${distribution(summary)}
     <section class="card">

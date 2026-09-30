@@ -108,9 +108,9 @@ describe('api provider', () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(detail));
     const api = createApiProvider(cfg, fetchMock);
     await api.getSite('a b/c');
-    expect(fetchMock.mock.calls[0]![0]).toBe('https://n8n.test/webhook/pmw/sites/a%20b%2Fc');
+    expect(fetchMock.mock.calls[0]![0]).toBe('https://n8n.test/webhook/pmw/site?id=a%20b%2Fc');
     expect(fetchMock.mock.calls[0]![1]).toMatchObject({ method: 'GET', credentials: 'omit' });
-    expect(ENDPOINTS.siteHistory('x', 30)).toBe('/sites/x/history?days=30');
+    expect(ENDPOINTS.siteHistory('x', 30)).toBe('/site-history?id=x&days=30');
   });
 
   it('never sends an Authorization header', async () => {

@@ -19,7 +19,7 @@ import { CHECK_META, checkIcon, severityPill, STATUS_META, statusBadge } from '.
 import { renderChart } from '../lib/chart';
 import { card, errorState, initials, loading, notFound, sampleNotice } from '../components/ui';
 import { dashboardHref } from './dashboard';
-import type { ViewContext } from './context';
+import { setSamplePill, type ViewContext } from './context';
 
 type Metric = keyof MetricTotals;
 const METRICS: Array<[Metric, string]> = [
@@ -69,6 +69,7 @@ export async function renderSiteDetail(
   document.title = `${site.name} · PMW Analytics Health`;
   const s = site;
   const meta = STATUS_META[s.status];
+  setSamplePill(!!s.isSample);
 
   main.innerHTML = `<div class="view" id="view">
     <a class="crumb" href="${dashboardHref()}">${ICONS.back}All sites</a>
@@ -82,7 +83,7 @@ export async function renderSiteDetail(
         </div>
       </div>
     </header>
-    ${sampleNotice(analyticsHealth.source)}
+    ${sampleNotice(analyticsHealth.source, !!s.isSample)}
     <div class="verdict ${meta.tone}">${statusBadge(s.status)}<div><div class="verdict-t">${esc(verdictText(s))}</div><div class="verdict-d">${esc(meta.description)}</div></div></div>
     <div class="detail-grid">
       <div class="detail-main">

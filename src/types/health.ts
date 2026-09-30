@@ -80,6 +80,8 @@ export interface SiteSummary extends SiteInventory {
   issueCategories: IssueCategory[];
   /** True when at least one open issue concerns conversions/key events. */
   hasConversionIssue: boolean;
+  /** True for seed/sample rows served by n8n before real monitoring runs. */
+  isSample?: boolean;
 }
 
 /** One line in a check group on the site detail page. */
@@ -125,7 +127,7 @@ export interface Issue {
   };
 }
 
-/** GET /sites/:id */
+/** GET /site?id=… */
 export interface SiteDetail extends SiteSummary {
   tracking: CheckItem[];
   ga4: CheckItem[];
@@ -152,7 +154,7 @@ export interface PeriodComparison {
   note?: string;
 }
 
-/** GET /sites/:id/history?days=N */
+/** GET /site-history?id=…&days=N */
 export interface SiteHistory {
   siteId: string;
   days: DailyMetrics[];
@@ -171,4 +173,7 @@ export interface HealthSummary {
   healthy: number;
   warning: number;
   critical: number;
+  /** True while n8n is serving seed/sample rows rather than real monitoring
+   *  results — the dashboard keeps its "Sample data" labelling. */
+  isSample?: boolean;
 }

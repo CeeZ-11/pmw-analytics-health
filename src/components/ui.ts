@@ -25,9 +25,9 @@ export function initials(name: string): string {
 }
 
 /** Shown on every page in mock mode: the numbers are not real. */
-export function sampleNotice(source: 'mock' | 'api'): string {
-  if (source !== 'mock') return '';
-  return `<div class="sample-note" role="note">${ICONS.info}<span><b>Sample data.</b> Sites, IDs and numbers are fictional — the dashboard isn't connected to n8n yet.</span><a href="${href.integration()}">How to connect →</a></div>`;
+export function sampleNotice(source: 'mock' | 'api', isSample = false): string {
+  if (source !== 'mock' && !isSample) return '';
+  return `<div class="sample-note" role="note">${ICONS.info}<span><b>Sample data.</b> Sites, IDs and numbers are fictional — ${source === 'mock' ? 'the dashboard isn\u2019t connected to n8n yet.' : 'n8n is serving seed data until the monitoring workflow runs.'}</span><a href="${href.integration()}">How to connect →</a></div>`;
 }
 
 export function loading(blocks: number[] = [88, 320]): string {
