@@ -6,3 +6,11 @@ coverage/
 .env.*.local
 .DS_Store
 *.log
+
+# Google service-account keys and other credentials — never commit these.
+# They belong only in n8n's credential store.
+pmw-analytics-health-*.json
+*service-account*.json
+*credentials*.json
+*.pem
+*.p12
