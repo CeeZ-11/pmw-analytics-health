@@ -6,6 +6,7 @@ import { analyticsHealth } from '../services/analyticsHealth';
 import { ENDPOINTS } from '../services/apiProvider';
 import { esc, ICONS } from '../lib/dom';
 import { card, pageHead } from '../components/ui';
+import { clearAccessKey, getAccessKey } from '../services/accessKey';
 import type { ViewContext } from './context';
 
 export function renderIntegration({ main }: ViewContext): void {
@@ -22,6 +23,7 @@ export function renderIntegration({ main }: ViewContext): void {
         <dt>Mode</dt><dd>${mock ? '<span class="pill warn">Sample data</span> bundled mock data — not real monitoring results' : '<span class="pill good">n8n API</span> live results from the monitoring automation'}</dd>
         <dt>API base URL</dt><dd>${config.apiBaseUrl ? `<code>${esc(config.apiBaseUrl)}</code>` : '<span class="c-muted">Not configured</span>'}</dd>
         <dt>Timeout</dt><dd>${Math.round(config.apiTimeoutMs / 1000)}s</dd>
+        ${mock ? '' : `<dt>Access key</dt><dd>${getAccessKey() ? 'Saved in this browser <button class="btn btn-ghost btn-sm" id="forget-key" type="button" style="height:24px;padding:0 8px;margin-left:6px">Forget key on this device</button>' : '<span class="c-muted">Not saved on this device</span>'}</dd>`}
       </dl>
       ${mock ? `<div class="prose"><p>To switch to n8n, build with <code>VITE_DATA_SOURCE=api</code> and <code>VITE_API_BASE_URL</code> set to the n8n webhook base (locally in <code>.env.local</code>; in GitHub Actions as repository <em>Variables</em>). See <code>docs/n8n-api-contract.md</code> for the response shapes.</p></div>` : ''}`,
       { icon: ICONS.plug },
@@ -56,4 +58,8 @@ Health analysis ──► Slack alerts &amp; daily summary</pre>
       { icon: ICONS.info },
     )}
   </div>`;
+  main.querySelector('#forget-key')?.addEventListener('click', () => {
+    clearAccessKey();
+    location.reload();
+  });
 }

@@ -162,3 +162,28 @@ describe('api provider', () => {
     });
   });
 });
+
+describe('access key', () => {
+  const cfg = { apiBaseUrl: 'https://n8n.test/webhook/pmw', apiTimeoutMs: 50 };
+
+  it('sends the team access key header when one is saved', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(await mock.getHealthSummary()));
+    await createApiProvider(cfg, fetchMock, () => 'k-123').getHealthSummary();
+    expect(fetchMock.mock.calls[0]![1].headers).toMatchObject({ 'X-PMW-Access-Key': 'k-123' });
+  });
+
+  it('sends no key header when none is saved', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(await mock.getHealthSummary()));
+    await createApiProvider(cfg, fetchMock, () => null).getHealthSummary();
+    expect(Object.keys(fetchMock.mock.calls[0]![1].headers)).toEqual(['Accept']);
+  });
+
+  it('turns 401/403 into an auth error', async () => {
+    const api = createApiProvider(
+      cfg,
+      vi.fn().mockResolvedValue(jsonResponse({}, 403)),
+      () => 'bad',
+    );
+    await expect(api.getSites()).rejects.toMatchObject({ kind: 'auth', status: 403 });
+  });
+});

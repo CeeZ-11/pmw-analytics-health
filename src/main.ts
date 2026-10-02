@@ -7,6 +7,7 @@ import { renderDashboard } from './views/dashboard';
 import { renderSiteDetail } from './views/siteDetail';
 import { renderIntegration } from './views/integration';
 import { notFound } from './components/ui';
+import { setAccessKey } from './services/accessKey';
 
 /** Each render gets a token; a slow response for a page the user already
  *  left is dropped instead of overwriting the page they're on now. */
@@ -52,6 +53,17 @@ async function route() {
       main.innerHTML = notFound('That page doesn’t exist.');
   }
 }
+
+// The access-key form (components/ui.ts accessForm) can appear on any page.
+document.addEventListener('submit', (e) => {
+  const form = e.target as HTMLFormElement;
+  if (form.id !== 'access-form') return;
+  e.preventDefault();
+  const value = ($<HTMLInputElement>('#access-key', form)?.value || '').trim();
+  if (!value) return;
+  setAccessKey(value);
+  location.reload();
+});
 
 let lastPath = '';
 window.addEventListener('hashchange', () => {

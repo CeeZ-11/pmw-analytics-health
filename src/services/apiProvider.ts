@@ -1,14 +1,14 @@
 /* n8n API provider — reads monitoring results from n8n webhook endpoints.
  *
  * The browser only ever talks to n8n; n8n holds the GA4 service account and
- * talks to Google. No request made here carries a credential: the endpoints
- * are read-only views of results n8n has already computed. See
- * docs/n8n-api-contract.md for what each endpoint must return and how to
- * restrict who can reach them. */
+ * talks to Google. Requests carry only the team access key the person typed
+ * in (services/accessKey.ts) — never a Google, n8n or Slack credential. See
+ * docs/n8n-api-contract.md for what each endpoint returns. */
 
 import type { AppConfig } from '../config';
 import type { HealthDataProvider } from './provider';
 import { DataError } from './provider';
+import { ACCESS_HEADER, getAccessKey } from './accessKey';
 import { assertHistory, assertSiteDetail, assertSites, assertSummary, unwrap } from './contract';
 
 /** Every path the dashboard calls, relative to VITE_API_BASE_URL. Keep this
@@ -26,15 +26,20 @@ export const ENDPOINTS = {
 export function createApiProvider(
   cfg: Pick<AppConfig, 'apiBaseUrl' | 'apiTimeoutMs'>,
   fetchImpl: typeof fetch = (...a) => fetch(...a),
+  accessKey: () => string | null = getAccessKey,
 ): HealthDataProvider {
   async function get(path: string, { allow404 = false } = {}): Promise<unknown> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), cfg.apiTimeoutMs);
+    const key = accessKey();
     let res: Response;
     try {
       res = await fetchImpl(`${cfg.apiBaseUrl}${path}`, {
         method: 'GET',
-        headers: { Accept: 'application/json' },
+        headers: {
+          Accept: 'application/json',
+          ...(key ? { [ACCESS_HEADER]: key } : {}),
+        },
         // Never send cookies/credentials to n8n from a public static page.
         credentials: 'omit',
         signal: controller.signal,
@@ -52,6 +57,13 @@ export function createApiProvider(
       );
     } finally {
       clearTimeout(timer);
+    }
+    if (res.status === 401 || res.status === 403) {
+      throw new DataError(
+        key ? 'That access key was not accepted.' : 'This dashboard needs the team access key.',
+        'auth',
+        res.status,
+      );
     }
     if (allow404 && res.status === 404) return null;
     if (!res.ok) throw new DataError(`n8n responded with HTTP ${res.status}.`, 'http', res.status);

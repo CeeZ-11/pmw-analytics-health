@@ -225,7 +225,8 @@ function renderChips({ sites }: DashData, state: SiteQuery) {
 }
 
 function issuePills(s: SiteSummary): string {
-  const { critical, warning } = s.issueCounts;
+  const critical = Number(s.issueCounts.critical) || 0;
+  const warning = Number(s.issueCounts.warning) || 0;
   if (!critical && !warning) return '<span class="c-muted">—</span>';
   return `<span class="issue-pills">${critical ? `<span class="pill poor">${critical} critical</span>` : ''}${warning ? `<span class="pill warn">${warning} warning</span>` : ''}</span>`;
 }

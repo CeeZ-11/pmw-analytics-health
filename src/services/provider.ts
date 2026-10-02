@@ -19,11 +19,12 @@ export interface HealthDataProvider {
 }
 
 /** A failure the UI can explain to a person: network, timeout, bad status,
- *  or a response that doesn't match the contract in types/health.ts. */
+ *  a missing/rejected access key, or a response that doesn't match the
+ *  contract in types/health.ts. */
 export class DataError extends Error {
   constructor(
     message: string,
-    readonly kind: 'network' | 'timeout' | 'http' | 'contract',
+    readonly kind: 'network' | 'timeout' | 'http' | 'contract' | 'auth',
     readonly status?: number,
   ) {
     super(message);
