@@ -219,21 +219,23 @@ Everything in `SiteSummary`, plus:
 
 ## Security
 
-- **No credentials in the frontend, ever.** GA4 service-account JSON, Google
-  private keys, n8n API keys / basic auth, Slack tokens live only in n8n
-  credentials. Every `VITE_*` value is public (it's compiled into the JS bundle).
-- The browser never calls Google APIs. It only calls these n8n endpoints.
-- GitHub Pages sites are public, and so are these endpoints once the
-  dashboard can reach them. CORS stops _other websites'_ JavaScript from
-  reading them, **not** direct requests (curl). So:
-  - return only what the dashboard displays (no raw API responses, no emails,
-    no tokens);
-  - give the read endpoints their own n8n workflow, separate from the
-    workflows that hold credentials;
-  - if the data must not be public, put both the dashboard and n8n behind an
-    access layer (e.g. Cloudflare Access / Zero Trust, or GitHub Pages with
-    private visibility on GitHub Enterprise Cloud). A token in the frontend
-    is not an access control — anyone can read it from the bundle.
+- **Team access key.** All four endpoints use n8n Header Auth (credential
+  **PMW Dashboard Access**, header `X-PMW-Access-Key`). Requests without the
+  right key get `403` and run nothing. Each person types the key into the
+  dashboard once per device; it is kept only in that browser's localStorage and
+  is never in the build, the repo or the public page. Share it via 1Password.
+  To rotate: change the credential's value in n8n, share the new key; everyone
+  re-enters it (Data source page → "Forget key on this device").
+- **No credentials in the frontend.** GA4 service-account key, Slack token and
+  the access key's stored value live only in n8n credentials.
+- **Content-Security-Policy** (added at build, see `vite.config.ts`): scripts
+  only from the site, network requests only to the site and the n8n origin.
+- **CORS** limits browser reads to `https://ceez-11.github.io` and localhost.
+- **GA4 access** is a dedicated service account with Viewer (read-only) role
+  and the `analytics.readonly` scope.
+- **Logs:** the Dashboard API saves no execution data on success; the daily
+  monitor posts to Slack if a run fails.
+- **Slack** channel `#pmw-analytics-monitor` is private.
 
 ## Suggested n8n layout
 
