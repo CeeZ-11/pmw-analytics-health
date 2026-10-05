@@ -9,13 +9,63 @@ export type IssueFilter = 'any' | 'tracking' | 'analytics' | 'data-quality' | 'c
 export type SortKey = 'health' | 'name' | 'checked';
 
 export interface SiteQuery {
+  /** 'all' or a group slug ("elite", "pmi"). */
+  group: string;
   status: StatusFilter;
   issue: IssueFilter;
   q: string;
   sort: SortKey;
 }
 
-export const DEFAULT_QUERY: SiteQuery = { status: 'all', issue: 'any', q: '', sort: 'health' };
+export const DEFAULT_QUERY: SiteQuery = {
+  group: 'all',
+  status: 'all',
+  issue: 'any',
+  q: '',
+  sort: 'health',
+};
+
+/** Groups always offered, in this order, even before they have sites. Any
+ *  other group n8n sends shows up after these automatically. */
+export const KNOWN_GROUPS: Array<[string, string]> = [
+  ['elite', 'Elite'],
+  ['pmi', 'PMI'],
+];
+
+export function groupLabel(slug: string | null | undefined): string {
+  if (!slug) return 'Ungrouped';
+  const known = KNOWN_GROUPS.find(([k]) => k === slug);
+  return known
+    ? known[1]
+    : slug.replace(/(^|-)(\w)/g, (_m, sep, c) => `${sep ? ' ' : ''}${c.toUpperCase()}`);
+}
+
+export function inGroup(sites: SiteSummary[], group: string): SiteSummary[] {
+  return group === 'all' ? sites : sites.filter((s) => (s.group || '') === group);
+}
+
+/** [slug, label, count] for every group tab: known groups first, then any
+ *  other group present in the data. */
+export function groupTabs(sites: SiteSummary[]): Array<[string, string, number]> {
+  const seen = new Set<string>(KNOWN_GROUPS.map(([k]) => k));
+  const extra = [
+    ...new Set(sites.map((s) => s.group || '').filter((g) => g && !seen.has(g))),
+  ].sort();
+  return [...KNOWN_GROUPS.map(([k]) => k), ...extra].map((g) => [
+    g,
+    groupLabel(g),
+    inGroup(sites, g).length,
+  ]);
+}
+
+export function statusCounts(sites: SiteSummary[]) {
+  return {
+    total: sites.length,
+    healthy: sites.filter((s) => s.status === 'healthy').length,
+    warning: sites.filter((s) => s.status === 'warning').length,
+    critical: sites.filter((s) => s.status === 'critical').length,
+  };
+}
 
 export const STATUS_FILTERS: Array<[StatusFilter, string]> = [
   ['all', 'All sites'],
@@ -37,7 +87,9 @@ export function parseQuery(params: URLSearchParams): SiteQuery {
     const keys = (allowed as Array<[T, string] | T>).map((a) => (Array.isArray(a) ? a[0] : a));
     return v && (keys as string[]).includes(v) ? (v as T) : d;
   };
+  const group = (params.get('group') || '').toLowerCase();
   return {
+    group: /^[a-z0-9-]{1,30}$/.test(group) ? group : DEFAULT_QUERY.group,
     status: pick(params.get('status'), STATUS_FILTERS, DEFAULT_QUERY.status),
     issue: pick(params.get('issue'), ISSUE_FILTERS, DEFAULT_QUERY.issue),
     q: (params.get('q') || '').slice(0, 100),
@@ -67,7 +119,7 @@ function matchesText(s: SiteSummary, q: string): boolean {
 }
 
 export function applyQuery(sites: SiteSummary[], q: SiteQuery): SiteSummary[] {
-  const out = sites.filter(
+  const out = inGroup(sites, q.group).filter(
     (s) =>
       (q.status === 'all' || s.status === q.status) &&
       matchesIssue(s, q.issue) &&

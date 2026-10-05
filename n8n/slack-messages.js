@@ -1,11 +1,23 @@
 /* PMW Analytics Health — Slack messages for the n8n daily monitor
  * ("Build Slack messages" Code node). One alert per site with NEW critical
- * issues (compared with the previous run), then one daily summary. */
+ * issues (compared with the previous run), then one daily summary PER GROUP
+ * (Elite, PMI, …). Lists are capped so a 300-site group stays readable; the
+ * dashboard link opens that group's full list. */
 
 const DASHBOARD = 'https://ceez-11.github.io/pmw-analytics-health/#/';
+const GROUP_LABELS = { elite: 'Elite', pmi: 'PMI' };
+const GROUP_ORDER = ['elite', 'pmi'];
+const MAX_LISTED = 15;
+
+function groupLabel(g) {
+  return g ? GROUP_LABELS[g] || g.charAt(0).toUpperCase() + g.slice(1) : 'Ungrouped';
+}
 
 function buildSlackMessages(currentRows, previousRows, now) {
-  const cur = currentRows.map((row) => ({ row, d: JSON.parse(row.detailJson) }));
+  const cur = currentRows.map((row) => {
+    const d = JSON.parse(row.detailJson);
+    return { row, d, group: d.group || '' };
+  });
   const prevIssueIds = {};
   for (const r of previousRows) {
     if (!r || !r.siteId || r.isSample || !r.detailJson) continue;
@@ -30,26 +42,34 @@ function buildSlackMessages(currentRows, previousRows, now) {
     const fresh = s.d.issues.filter((i) => i.severity === 'critical' && !seen.has(i.id));
     if (!fresh.length) continue;
     messages.push(
-      `:rotating_light: *Critical: ${s.row.name}* (${s.d.domain})\n` +
+      `:rotating_light: *Critical: ${s.row.name}* (${s.d.domain}) · ${groupLabel(s.group)}\n` +
         fresh.map((i) => `• *${i.title}* — ${i.detail}`).join('\n') +
         `\n${link(s, 'Open in dashboard')}`,
     );
   }
 
-  const counts = { healthy: 0, warning: 0, critical: 0 };
-  cur.forEach((s) => (counts[s.row.status] += 1));
   const date = now.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
     timeZone: 'America/Los_Angeles',
   });
-  const attention = cur
-    .filter((s) => s.row.status !== 'healthy')
-    .sort(
-      (a, b) => order[a.row.status] - order[b.row.status] || a.row.name.localeCompare(b.row.name),
-    )
-    .map((s) => {
+  const groups = [...new Set(cur.map((s) => s.group))].sort((a, b) => {
+    const ia = GROUP_ORDER.indexOf(a);
+    const ib = GROUP_ORDER.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+  });
+  for (const g of groups) {
+    const sites = cur.filter((s) => s.group === g);
+    const counts = { healthy: 0, warning: 0, critical: 0 };
+    sites.forEach((s) => (counts[s.row.status] += 1));
+    const groupLink = `${DASHBOARD}${g ? `?group=${encodeURIComponent(g)}` : ''}`;
+    const attention = sites
+      .filter((s) => s.row.status !== 'healthy')
+      .sort(
+        (a, b) => order[a.row.status] - order[b.row.status] || a.row.name.localeCompare(b.row.name),
+      );
+    const lines = attention.slice(0, MAX_LISTED).map((s) => {
       const titles = s.d.issues
         .slice(0, 2)
         .map((i) => i.title)
@@ -57,14 +77,21 @@ function buildSlackMessages(currentRows, previousRows, now) {
       const more = s.d.issues.length > 2 ? ` (+${s.d.issues.length - 2} more)` : '';
       return `${icon[s.row.status]} ${link(s)} — ${titles}${more}`;
     });
-  const healthy = cur.filter((s) => s.row.status === 'healthy').map((s) => s.row.name);
-  let text =
-    `*PMW Analytics Health — ${date}*\n` +
-    `${cur.length} sites · ${icon.healthy} ${counts.healthy} healthy · ${icon.warning} ${counts.warning} warning · ${icon.critical} ${counts.critical} critical`;
-  if (attention.length) text += `\n\n*Needs attention*\n${attention.join('\n')}`;
-  if (healthy.length) text += `\n\n*Healthy:* ${healthy.join(', ')}`;
-  text += `\n\n<${DASHBOARD}|Open dashboard>`;
-  messages.push(text);
+    if (attention.length > MAX_LISTED) {
+      lines.push(
+        `…and ${attention.length - MAX_LISTED} more — <${groupLink}|see all in the dashboard>`,
+      );
+    }
+    const healthy = sites.filter((s) => s.row.status === 'healthy').map((s) => s.row.name);
+    let text =
+      `*PMW Analytics Health · ${groupLabel(g)} — ${date}*\n` +
+      `${sites.length} sites · ${icon.healthy} ${counts.healthy} healthy · ${icon.warning} ${counts.warning} warning · ${icon.critical} ${counts.critical} critical`;
+    if (lines.length) text += `\n\n*Needs attention*\n${lines.join('\n')}`;
+    if (healthy.length && healthy.length <= MAX_LISTED)
+      text += `\n\n*Healthy:* ${healthy.join(', ')}`;
+    text += `\n\n<${groupLink}|Open ${groupLabel(g)} in the dashboard>`;
+    messages.push(text);
+  }
   return messages;
 }
 

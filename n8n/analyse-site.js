@@ -540,6 +540,10 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now) {
     id: inv.siteId,
     name: inv.name,
     domain: inv.domain,
+    group:
+      String(inv.siteGroup || '')
+        .trim()
+        .toLowerCase() || null,
     ga4PropertyId: inv.ga4PropertyId || null,
     ga4MeasurementId: mid || null,
     gtmContainerId: gtmId || null,

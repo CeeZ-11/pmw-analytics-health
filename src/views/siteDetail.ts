@@ -17,6 +17,7 @@ import { CATEGORY_LABEL, issueLabel } from '../lib/issues';
 import { href, replaceHash } from '../lib/router';
 import { CHECK_META, checkIcon, severityPill, STATUS_META, statusBadge } from '../lib/status';
 import { renderChart } from '../lib/chart';
+import { groupLabel } from '../lib/filters';
 import { card, errorState, initials, loading, notFound, sampleNotice } from '../components/ui';
 import { dashboardHref } from './dashboard';
 import { setSamplePill, type ViewContext } from './context';
@@ -80,6 +81,7 @@ export async function renderSiteDetail(
         <div class="detail-meta">
           <a href="https://${esc(s.domain)}" target="_blank" rel="noopener noreferrer">${esc(s.domain)}${ICONS.external}</a>
           <span>${ICONS.clock} Last checked ${esc(fmtDateTime(s.lastChecked))}</span>
+          ${s.group ? `<span class="pill muted">${esc(groupLabel(s.group))}</span>` : ''}
         </div>
       </div>
     </header>
@@ -230,6 +232,7 @@ function inventory(s: SiteDetail): string {
     x ? `<code>${esc(x)}</code>` : '<span class="c-muted">Not set</span>';
   return `<dl class="kv">
     <dt>Domain</dt><dd>${esc(s.domain)}</dd>
+    <dt>Group</dt><dd>${s.group ? esc(groupLabel(s.group)) : '<span class="c-muted">Not set</span>'}</dd>
     <dt>GA4 property</dt><dd>${v(s.ga4PropertyId)}</dd>
     <dt>Measurement ID</dt><dd>${v(s.ga4MeasurementId)}</dd>
     <dt>GTM container</dt><dd>${v(s.gtmContainerId)}</dd>

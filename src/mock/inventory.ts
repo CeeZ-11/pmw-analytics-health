@@ -53,6 +53,8 @@ function site(
     expectedConversions: listing ? CONV_LISTING : CONV_STD,
     scenario,
     baseUsers,
+    // Sample split so local dev shows both groups.
+    group: n <= 13 ? 'elite' : 'pmi',
   };
 }
 

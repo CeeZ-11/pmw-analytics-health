@@ -3,16 +3,22 @@
  * a searchable / filterable site health table. */
 
 import type { HealthSummary, SiteSummary } from '../types/health';
+
+type Counts = ReturnType<typeof statusCounts>;
 import { analyticsHealth } from '../services/analyticsHealth';
 import { $, esc, ICONS } from '../lib/dom';
 import { fmtDateTime, fmtRelative } from '../lib/format';
 import {
   applyQuery,
+  groupLabel,
+  groupTabs,
+  inGroup,
   ISSUE_FILTERS,
   issueFilterCounts,
   parseQuery,
   queryToParams,
   STATUS_FILTERS,
+  statusCounts,
   type SiteQuery,
 } from '../lib/filters';
 import { href, replaceHash } from '../lib/router';
@@ -69,8 +75,9 @@ function paint(ctx: ViewContext, data: DashData, query: SiteQuery) {
       `<button class="btn btn-ghost" id="refresh" title="Reload results from ${analyticsHealth.source === 'mock' ? 'sample data' : 'n8n'}">${ICONS.refresh}Refresh</button>`,
     )}
     ${sampleNotice(analyticsHealth.source, !!summary.isSample)}
+    <div class="seg group-tabs" id="group-tabs" role="group" aria-label="Site group"></div>
     <div class="stats" id="stats"></div>
-    ${distribution(summary)}
+    <div id="dist"></div>
     <section class="card">
       <div class="card-h"><h2 class="card-t" style="margin:0">${ICONS.pulse}Sites</h2>
         <span class="card-tools note">Checked ${esc(fmtDateTime(summary.lastRunAt))}</span></div>
@@ -107,9 +114,13 @@ function paint(ctx: ViewContext, data: DashData, query: SiteQuery) {
   const update = () => {
     lastParams = queryToParams(state);
     replaceHash(href.dashboard(lastParams));
-    renderStats(data, state);
-    renderChips(data, state);
-    renderRows(data, state);
+    const scoped = inGroup(data.sites, state.group);
+    const counts = statusCounts(scoped);
+    renderGroupTabs(data, state);
+    renderStats(counts, state);
+    $('#dist')!.innerHTML = distribution(counts);
+    renderChips(scoped, state);
+    renderRows(data, scoped, state);
   };
 
   ($('#sort', main) as HTMLSelectElement).value = state.sort;
@@ -123,6 +134,11 @@ function paint(ctx: ViewContext, data: DashData, query: SiteQuery) {
   });
   view.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
+    const g = t.closest<HTMLElement>('[data-group]');
+    if (g) {
+      state.group = g.dataset.group!;
+      return update();
+    }
     const f = t.closest<HTMLElement>('[data-status]');
     if (f) {
       const v = f.dataset.status as SiteQuery['status'];
@@ -157,7 +173,20 @@ function paint(ctx: ViewContext, data: DashData, query: SiteQuery) {
   update();
 }
 
-function renderStats({ summary }: DashData, state: SiteQuery) {
+function renderGroupTabs({ sites }: DashData, state: SiteQuery) {
+  const tabs: Array<[string, string, number]> = [
+    ['all', 'All sites', sites.length],
+    ...groupTabs(sites),
+  ];
+  $('#group-tabs')!.innerHTML = tabs
+    .map(
+      ([g, label, n]) =>
+        `<button type="button" data-group="${esc(g)}" class="${state.group === g ? 'is-active' : ''}" aria-pressed="${state.group === g}">${esc(label)} <span class="n">${n}</span></button>`,
+    )
+    .join('');
+}
+
+function renderStats(summary: Counts, state: SiteQuery) {
   const tile = (
     key: SiteQuery['status'],
     label: string,
@@ -170,7 +199,13 @@ function renderStats({ summary }: DashData, state: SiteQuery) {
   const pct = (n: number) =>
     summary.total ? `${Math.round((n / summary.total) * 100)}% of sites` : '—';
   $('#stats')!.innerHTML = [
-    tile('all', 'Sites monitored', summary.total, 'info', 'All monitored sites'),
+    tile(
+      'all',
+      'Sites monitored',
+      summary.total,
+      'info',
+      state.group === 'all' ? 'All monitored sites' : `${groupLabel(state.group)} sites`,
+    ),
     tile(
       'healthy',
       `<span class="sdot sdot--good"></span>Healthy`,
@@ -195,7 +230,7 @@ function renderStats({ summary }: DashData, state: SiteQuery) {
   ].join('');
 }
 
-function distribution(s: HealthSummary): string {
+function distribution(s: Counts): string {
   if (!s.total) return '';
   const seg = (n: number, tone: string, label: string) =>
     n ? `<i class="${tone}" style="flex:${n}" title="${esc(`${n} ${label}`)}"></i>` : '';
@@ -208,7 +243,7 @@ function distribution(s: HealthSummary): string {
     </div></section>`;
 }
 
-function renderChips({ sites }: DashData, state: SiteQuery) {
+function renderChips(sites: SiteSummary[], state: SiteQuery) {
   const counts = issueFilterCounts(sites);
   const byStatus = (k: string) =>
     k === 'all' ? sites.length : sites.filter((s) => s.status === k).length;
@@ -231,8 +266,8 @@ function issuePills(s: SiteSummary): string {
   return `<span class="issue-pills">${critical ? `<span class="pill poor">${critical} critical</span>` : ''}${warning ? `<span class="pill warn">${warning} warning</span>` : ''}</span>`;
 }
 
-function renderRows({ sites }: DashData, state: SiteQuery) {
-  const rows = applyQuery(sites, state);
+function renderRows({ sites: all }: DashData, sites: SiteSummary[], state: SiteQuery) {
+  const rows = applyQuery(all, state);
   $('#count')!.textContent =
     `${rows.length} of ${sites.length} site${sites.length === 1 ? '' : 's'}`;
   const tbody = $('#rows')!;
@@ -244,7 +279,7 @@ function renderRows({ sites }: DashData, state: SiteQuery) {
     .map(
       (s) => `<tr class="is-link" data-id="${esc(s.id)}">
         <td class="sticky-col"><div class="site-cell"><span class="site-ini" aria-hidden="true">${initials(s.name)}</span>
-          <div><a class="site-name" href="${href.site(s.id)}">${esc(s.name)}</a><div class="site-domain">${esc(s.domain)}</div></div></div></td>
+          <div><a class="site-name" href="${href.site(s.id)}">${esc(s.name)}</a><div class="site-domain">${esc(s.domain)}${state.group === 'all' && s.group ? ` <span class="pill muted">${esc(groupLabel(s.group))}</span>` : ''}</div></div></div></td>
         <td class="c">${checkIcon(s.checks.ga4, 'GA4')}</td>
         <td class="c">${checkIcon(s.checks.gtm, 'GTM')}</td>
         <td class="c">${checkIcon(s.checks.data, 'Data')}</td>

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   applyQuery,
   DEFAULT_QUERY,
+  groupTabs,
+  statusCounts,
   issueFilterCounts,
   parseQuery,
   queryToParams,
@@ -97,5 +99,27 @@ describe('status + formatting', () => {
     expect(fmtPct(12.34)).toBe('+12.3%');
     expect(fmtRelative(null)).toBe('Never');
     expect(fmtRelative(new Date(Date.now() - 3 * 3600_000).toISOString())).toBe('3h ago');
+  });
+});
+
+describe('groups', () => {
+  it('filters by group and keeps it in the URL', async () => {
+    const sites = await sitesP;
+    const elite = applyQuery(sites, { ...DEFAULT_QUERY, group: 'elite' });
+    expect(elite.length).toBeGreaterThan(0);
+    expect(elite.every((s) => s.group === 'elite')).toBe(true);
+    expect(queryToParams({ ...DEFAULT_QUERY, group: 'pmi' }).toString()).toBe('group=pmi');
+    expect(parseQuery(new URLSearchParams('group=PMI')).group).toBe('pmi');
+    expect(parseQuery(new URLSearchParams('group=<x>')).group).toBe('all');
+  });
+
+  it('always offers Elite and PMI tabs, with counts that add up', async () => {
+    const sites = await sitesP;
+    const tabs = groupTabs(sites);
+    expect(tabs.slice(0, 2).map((t) => t[1])).toEqual(['Elite', 'PMI']);
+    expect(tabs.reduce((n, t) => n + t[2], 0)).toBe(sites.length);
+    expect(groupTabs([]).map((t) => t[2])).toEqual([0, 0]);
+    const c = statusCounts(sites);
+    expect(c.healthy + c.warning + c.critical).toBe(c.total);
   });
 });

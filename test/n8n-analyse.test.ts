@@ -229,3 +229,43 @@ describe('n8n analyse-site', () => {
     expect(i.id).toBe('test-site-expected_conversion_missing-form_submission');
   });
 });
+
+const slackSrc = readFileSync(resolve(process.cwd(), 'n8n/slack-messages.js'), 'utf8').split(
+  '// ---- n8n glue',
+)[0];
+const { buildSlackMessages } = new Function(`${slackSrc}\nreturn { buildSlackMessages };`)() as {
+  buildSlackMessages: (cur: unknown[], prev: unknown[], now: Date) => string[];
+};
+
+describe('n8n slack messages', () => {
+  const site = (i: number, group: string, status = 'warning') => {
+    const r = run({
+      inv: {
+        ...inv,
+        siteId: `s${i}`,
+        name: `Site ${i}`,
+        siteGroup: group,
+        expectedConversions: '',
+      },
+    });
+    return { ...r.row, status, detailJson: r.row.detailJson };
+  };
+
+  it('posts one summary per group, Elite first, with the group in the site', () => {
+    const msgs = buildSlackMessages([site(1, 'pmi'), site(2, 'elite')], [], NOW);
+    expect(msgs).toHaveLength(2);
+    expect(msgs[0]).toContain('· Elite —');
+    expect(msgs[1]).toContain('· PMI —');
+    expect(msgs[1]).toContain('?group=pmi');
+    expect(JSON.parse(run({ inv: { ...inv, siteGroup: 'PMI' } }).row.summaryJson).group).toBe(
+      'pmi',
+    );
+  });
+
+  it('caps the needs-attention list for big groups', () => {
+    const many = Array.from({ length: 40 }, (_, i) => site(i, 'pmi'));
+    const [msg] = buildSlackMessages(many, [], NOW);
+    expect(msg!.match(/:large_yellow_circle: </g)).toHaveLength(15);
+    expect(msg).toContain('and 25 more');
+  });
+});
