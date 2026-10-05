@@ -186,6 +186,15 @@ describe('n8n analyse-site', () => {
     expect(r.codes).toContain('duplicate_tracking');
   });
 
+  it('detects two Google tags for the same ID inside GTM', () => {
+    const tag = '{"function":"__googtag","once_per_event":true,"vtp_tagId":"G-ABC123XYZ9"}';
+    const twice = run({ gtm: { data: `var data = {"tags":[${tag},${tag}]};${' '.repeat(2000)}` } });
+    const dup = twice.detail.issues.find((i: { code: string }) => i.code === 'duplicate_tracking');
+    expect(dup.title).toBe('Duplicate Google tag in GTM');
+    expect(twice.summary.checks.ga4).toBe('warn');
+    expect(run().codes).not.toContain('duplicate_tracking');
+  });
+
   it('treats a failed homepage fetch as unknown tracking, not missing tracking', () => {
     const r = run({ home: { error: { message: 'timeout of 30000ms exceeded' } } });
     expect(r.codes).toEqual(['crawl_failed']);

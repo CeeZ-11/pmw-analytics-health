@@ -17,7 +17,12 @@ const MIN = { users: 50, sessions: 50, events: 200, conversions: 5 };
 
 function isoDayInTz(date, tz) {
   try {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
   } catch (e) {
     return date.toISOString().slice(0, 10);
   }
@@ -74,11 +79,17 @@ function compare(days, conversionsConfigured) {
     const tracked = metric !== 'conversions' || conversionsConfigured;
     if (tracked && previous >= floor && current === 0) {
       status = 'critical';
-      note = metric === 'conversions' ? 'Possible conversion tracking issue' : `No ${metric} recorded — possible tracking outage`;
+      note =
+        metric === 'conversions'
+          ? 'Possible conversion tracking issue'
+          : `No ${metric} recorded — possible tracking outage`;
     } else if (tracked && previous >= floor * (metric === 'conversions' ? 2 : 1)) {
       if (changePct <= -50) {
         status = 'critical';
-        note = metric === 'conversions' ? 'Possible conversion tracking issue' : `${metric[0].toUpperCase()}${metric.slice(1)} down sharply`;
+        note =
+          metric === 'conversions'
+            ? 'Possible conversion tracking issue'
+            : `${metric[0].toUpperCase()}${metric.slice(1)} down sharply`;
       } else if (changePct <= -25) {
         status = 'warning';
         note = `${metric[0].toUpperCase()}${metric.slice(1)} well below the previous ${PERIOD_DAYS} days`;
@@ -112,16 +123,33 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now) {
   const nowIso = now.toISOString();
   const issues = [];
   const issue = (code, category, severity, title, detail, comparison, key = '') =>
-    issues.push({ id: `${inv.siteId}-${code}${key ? `-${key}` : ''}`, code, category, severity, title, detail, detectedAt: nowIso, ...(comparison ? { comparison } : {}) });
+    issues.push({
+      id: `${inv.siteId}-${code}${key ? `-${key}` : ''}`,
+      code,
+      category,
+      severity,
+      title,
+      detail,
+      detectedAt: nowIso,
+      ...(comparison ? { comparison } : {}),
+    });
   const mid = (inv.ga4MeasurementId || '').trim();
   const gtmId = (inv.gtmContainerId || '').trim();
-  const expectedEvents = String(inv.expectedEvents || '').split(',').map((s) => s.trim()).filter(Boolean);
-  const expectedConversions = String(inv.expectedConversions || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const expectedEvents = String(inv.expectedEvents || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const expectedConversions = String(inv.expectedConversions || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   // ---------------------------------------------------------------- website
-  const html = typeof (home && (home.body ?? home.data)) === 'string' ? home.body ?? home.data : '';
+  const html =
+    typeof (home && (home.body ?? home.data)) === 'string' ? (home.body ?? home.data) : '';
   const status = num(home && home.statusCode);
-  const crawlOk = !errText(home) && html.length > 500 && (status === 0 || (status >= 200 && status < 400));
+  const crawlOk =
+    !errText(home) && html.length > 500 && (status === 0 || (status >= 200 && status < 400));
   const gtmJs = gtm && typeof gtm.data === 'string' && gtm.data.length > 1000 ? gtm.data : '';
   const gtmIdsOnPage = uniq(html.match(/GTM-[A-Z0-9]{4,10}/g) || []);
   const gaPattern = /["'=](G-[A-Z0-9]{6,12})(?=["'&])/g;
@@ -132,45 +160,139 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now) {
   const t = {};
   if (!crawlOk) {
     const why = errText(home) || (status ? `HTTP ${status}` : 'empty response');
-    for (const k of ['ga4_tag', 'gtm_container', 'measurement_id', 'duplicate']) t[k] = { result: 'unknown', detail: `Not checked — homepage fetch failed (${why}).` };
-    issue('crawl_failed', 'tracking', 'warning', 'Website check failed', `The homepage couldn't be loaded (${why}), so tracking checks were skipped. GA4 data checks still ran.`);
+    for (const k of ['ga4_tag', 'gtm_container', 'measurement_id', 'duplicate'])
+      t[k] = { result: 'unknown', detail: `Not checked — homepage fetch failed (${why}).` };
+    issue(
+      'crawl_failed',
+      'tracking',
+      'warning',
+      'Website check failed',
+      `The homepage couldn't be loaded (${why}), so tracking checks were skipped. GA4 data checks still ran.`,
+    );
   } else {
-    if (!gtmId) t.gtm_container = { result: 'unknown', detail: 'No GTM container in the inventory for this site.' };
-    else if (gtmIdsOnPage.includes(gtmId)) t.gtm_container = { result: 'pass', detail: `${gtmId} found on the homepage.` };
+    if (!gtmId)
+      t.gtm_container = {
+        result: 'unknown',
+        detail: 'No GTM container in the inventory for this site.',
+      };
+    else if (gtmIdsOnPage.includes(gtmId))
+      t.gtm_container = { result: 'pass', detail: `${gtmId} found on the homepage.` };
     else if (gtmIdsOnPage.length) {
-      t.gtm_container = { result: 'fail', detail: `Expected ${gtmId}, found ${gtmIdsOnPage.join(', ')}.` };
-      issue('gtm_container_mismatch', 'tracking', 'critical', 'Incorrect GTM container', `The homepage loads ${gtmIdsOnPage.join(', ')} instead of the expected ${gtmId}.`);
+      t.gtm_container = {
+        result: 'fail',
+        detail: `Expected ${gtmId}, found ${gtmIdsOnPage.join(', ')}.`,
+      };
+      issue(
+        'gtm_container_mismatch',
+        'tracking',
+        'critical',
+        'Incorrect GTM container',
+        `The homepage loads ${gtmIdsOnPage.join(', ')} instead of the expected ${gtmId}.`,
+      );
     } else {
       t.gtm_container = { result: 'fail', detail: `${gtmId} not found on the homepage.` };
-      issue('gtm_missing', 'tracking', 'critical', 'GTM container missing', `The expected GTM container ${gtmId} is no longer on the homepage. This often happens after a theme update or site rebuild.`);
+      issue(
+        'gtm_missing',
+        'tracking',
+        'critical',
+        'GTM container missing',
+        `The expected GTM container ${gtmId} is no longer on the homepage. This often happens after a theme update or site rebuild.`,
+      );
     }
 
     if (gtmUnreadable && !gaIds.length) {
-      t.ga4_tag = { result: 'unknown', detail: `Couldn't read GTM container ${gtmId} to look for the GA4 tag.` };
+      t.ga4_tag = {
+        result: 'unknown',
+        detail: `Couldn't read GTM container ${gtmId} to look for the GA4 tag.`,
+      };
       t.measurement_id = { result: 'unknown', detail: 'Not checked — GTM container unreadable.' };
     } else if (!gaIds.length) {
-      t.ga4_tag = { result: 'fail', detail: 'No GA4 measurement ID on the homepage or in the GTM container.' };
+      t.ga4_tag = {
+        result: 'fail',
+        detail: 'No GA4 measurement ID on the homepage or in the GTM container.',
+      };
       t.measurement_id = { result: 'fail', detail: 'No measurement ID present to compare.' };
-      issue('ga4_missing', 'tracking', 'critical', 'GA4 missing', 'No GA4 tag was found on the homepage or in its GTM container.');
+      issue(
+        'ga4_missing',
+        'tracking',
+        'critical',
+        'GA4 missing',
+        'No GA4 tag was found on the homepage or in its GTM container.',
+      );
     } else {
       const where = html.includes(mid) ? 'on the homepage' : 'in the GTM container';
-      t.ga4_tag = { result: 'pass', detail: gaIds.includes(mid) ? `${mid} found ${where}.` : `GA4 tag found (${gaIds.join(', ')}).` };
-      if (gaIds.includes(mid) && !otherGa.length) t.measurement_id = { result: 'pass', detail: 'Sends to the expected GA4 stream.' };
+      t.ga4_tag = {
+        result: 'pass',
+        detail: gaIds.includes(mid)
+          ? `${mid} found ${where}.`
+          : `GA4 tag found (${gaIds.join(', ')}).`,
+      };
+      if (gaIds.includes(mid) && !otherGa.length)
+        t.measurement_id = { result: 'pass', detail: 'Sends to the expected GA4 stream.' };
       else if (gaIds.includes(mid)) {
-        t.measurement_id = { result: 'warn', detail: `Expected ${mid} plus additional ID(s): ${otherGa.join(', ')}.` };
-        issue('measurement_id_mismatch', 'tracking', 'warning', 'Additional GA4 measurement ID', `Besides ${mid}, the site also sends to ${otherGa.join(', ')}. Check whether that stream is intentional.`);
+        t.measurement_id = {
+          result: 'warn',
+          detail: `Expected ${mid} plus additional ID(s): ${otherGa.join(', ')}.`,
+        };
+        issue(
+          'measurement_id_mismatch',
+          'tracking',
+          'warning',
+          'Additional GA4 measurement ID',
+          `Besides ${mid}, the site also sends to ${otherGa.join(', ')}. Check whether that stream is intentional.`,
+        );
       } else {
-        t.measurement_id = { result: 'fail', detail: `Expected ${mid}, found ${otherGa.join(', ')}.` };
-        issue('measurement_id_mismatch', 'tracking', 'critical', 'Incorrect Measurement ID', `The site sends data to ${otherGa.join(', ')} instead of ${mid}, so this property isn't receiving it.`);
+        t.measurement_id = {
+          result: 'fail',
+          detail: `Expected ${mid}, found ${otherGa.join(', ')}.`,
+        };
+        issue(
+          'measurement_id_mismatch',
+          'tracking',
+          'critical',
+          'Incorrect Measurement ID',
+          `The site sends data to ${otherGa.join(', ')} instead of ${mid}, so this property isn't receiving it.`,
+        );
       }
     }
 
+    // Google tags for the expected ID inside the GTM container. Two that both
+    // fire on every page send every page_view twice.
+    const googTagsInGtm = mid
+      ? [
+          ...gtmJs.matchAll(/"function":"__googtag"[^{}]*?"vtp_tagId":"(G-[A-Z0-9]{6,12})"/g),
+        ].filter((m) => m[1] === mid).length
+      : 0;
     if (mid && html.includes(`gtag/js?id=${mid}`) && gtmJs.includes(mid)) {
-      t.duplicate = { result: 'warn', detail: `${mid} is installed both directly on the page and in GTM.` };
-      issue('duplicate_tracking', 'tracking', 'warning', 'Potential duplicate tracking', `${mid} is loaded by a hard-coded gtag.js snippet and by GTM, which can double-count page views and events.`);
+      t.duplicate = {
+        result: 'warn',
+        detail: `${mid} is installed both directly on the page and in GTM.`,
+      };
+      issue(
+        'duplicate_tracking',
+        'tracking',
+        'warning',
+        'Potential duplicate tracking',
+        `${mid} is loaded by a hard-coded gtag.js snippet and by GTM, which can double-count page views and events.`,
+      );
+    } else if (googTagsInGtm > 1) {
+      t.duplicate = {
+        result: 'warn',
+        detail: `GTM container has ${googTagsInGtm} Google tags for ${mid}.`,
+      };
+      issue(
+        'duplicate_tracking',
+        'tracking',
+        'warning',
+        'Duplicate Google tag in GTM',
+        `GTM container ${gtmId} has ${googTagsInGtm} Google tags for ${mid}. If they fire on the same pages, every page view is counted ${googTagsInGtm} times. Keep one and remove the others.`,
+      );
     } else t.duplicate = { result: 'pass', detail: 'One GA4 installation found.' };
   }
-  t.tracking_request = { result: 'unknown', detail: 'Needs a real browser — not part of the daily HTML check yet.' };
+  t.tracking_request = {
+    result: 'unknown',
+    detail: 'Needs a real browser — not part of the daily HTML check yet.',
+  };
   const tracking = [
     ['ga4_tag', 'GA4 detected'],
     ['gtm_container', 'GTM detected'],
@@ -189,20 +311,50 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now) {
   const ga4Err = errText(daily);
   const conversionsConfigured = expectedConversions.length > 0;
   if (!inv.ga4PropertyId) {
-    for (const k of ['property_access', 'recent_data', 'events', 'conversions']) g[k] = { result: 'unknown', detail: 'No GA4 property linked — run GA4 discovery.' };
-    issue('ga4_not_linked', 'analytics', 'warning', 'GA4 property not linked', 'This site has no GA4 property ID in the inventory, so no analytics checks ran.');
+    for (const k of ['property_access', 'recent_data', 'events', 'conversions'])
+      g[k] = { result: 'unknown', detail: 'No GA4 property linked — run GA4 discovery.' };
+    issue(
+      'ga4_not_linked',
+      'analytics',
+      'warning',
+      'GA4 property not linked',
+      'This site has no GA4 property ID in the inventory, so no analytics checks ran.',
+    );
   } else if (ga4Err || !daily) {
     const denied = /403|PERMISSION|404|not found/i.test(ga4Err);
-    g.property_access = { result: denied ? 'fail' : 'unknown', detail: ga4Err || 'No response from the GA4 Data API.' };
-    for (const k of ['recent_data', 'events', 'conversions']) g[k] = { result: 'unknown', detail: 'Not checked — GA4 query failed.' };
-    if (denied) issue('property_inaccessible', 'analytics', 'critical', 'GA4 property inaccessible', `The monitoring service account can't read GA4 property ${inv.ga4PropertyId} (${ga4Err}). Re-add it as a Viewer in GA4 → Admin → Property access management.`);
-    else issue('ga4_query_failed', 'analytics', 'warning', 'GA4 query failed', `The GA4 Data API returned an error: ${ga4Err || 'no response'}. This is usually temporary.`);
+    g.property_access = {
+      result: denied ? 'fail' : 'unknown',
+      detail: ga4Err || 'No response from the GA4 Data API.',
+    };
+    for (const k of ['recent_data', 'events', 'conversions'])
+      g[k] = { result: 'unknown', detail: 'Not checked — GA4 query failed.' };
+    if (denied)
+      issue(
+        'property_inaccessible',
+        'analytics',
+        'critical',
+        'GA4 property inaccessible',
+        `The monitoring service account can't read GA4 property ${inv.ga4PropertyId} (${ga4Err}). Re-add it as a Viewer in GA4 → Admin → Property access management.`,
+      );
+    else
+      issue(
+        'ga4_query_failed',
+        'analytics',
+        'warning',
+        'GA4 query failed',
+        `The GA4 Data API returned an error: ${ga4Err || 'no response'}. This is usually temporary.`,
+      );
   } else {
     const tz = (prop && prop.timeZone) || 'America/Los_Angeles';
     days = buildDays(daily, tz, now);
     comparisons = compare(days, conversionsConfigured);
     const y = days[days.length - 1];
-    last24h = { users: y.users, sessions: y.sessions, events: y.events, conversions: y.conversions };
+    last24h = {
+      users: y.users,
+      sessions: y.sessions,
+      events: y.events,
+      conversions: y.conversions,
+    };
     g.property_access = { result: 'pass', detail: `GA4 property ${inv.ga4PropertyId} readable.` };
 
     const baseline = sum(days.slice(-31, -3), 'sessions') / 28;
@@ -210,57 +362,162 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now) {
     let noData = false;
     if (baseline >= 5 && last2 === 0) {
       noData = true;
-      g.recent_data = { result: 'fail', detail: `0 sessions in the last 2 days (usually ~${Math.round(baseline)}/day).` };
-      issue('no_recent_data', 'analytics', 'critical', 'No recent GA4 data', `GA4 recorded no sessions for the last 2 days, against a normal ~${Math.round(baseline)} a day. Tracking may be broken.`);
+      g.recent_data = {
+        result: 'fail',
+        detail: `0 sessions in the last 2 days (usually ~${Math.round(baseline)}/day).`,
+      };
+      issue(
+        'no_recent_data',
+        'analytics',
+        'critical',
+        'No recent GA4 data',
+        `GA4 recorded no sessions for the last 2 days, against a normal ~${Math.round(baseline)} a day. Tracking may be broken.`,
+      );
     } else if (y.sessions === 0 && baseline >= 20) {
-      g.recent_data = { result: 'warn', detail: 'No sessions yesterday yet — may be GA4 processing delay.' };
+      g.recent_data = {
+        result: 'warn',
+        detail: 'No sessions yesterday yet — may be GA4 processing delay.',
+      };
     } else {
-      g.recent_data = { result: 'pass', detail: `${y.sessions.toLocaleString('en-US')} sessions yesterday.` };
+      g.recent_data = {
+        result: 'pass',
+        detail: `${y.sessions.toLocaleString('en-US')} sessions yesterday.`,
+      };
     }
 
     const byName = (k) => comparisons.find((c) => c.metric === k);
     const usersC = byName('users');
     const eventsC = byName('events');
     const convC = byName('conversions');
-    const cmp = (c) => ({ metric: c.metric, previous: c.previous, current: c.current, changePct: c.changePct });
+    const cmp = (c) => ({
+      metric: c.metric,
+      previous: c.previous,
+      current: c.current,
+      changePct: c.changePct,
+    });
     if (!noData && usersC.status !== 'healthy' && usersC.changePct < 0) {
-      issue('traffic_drop', 'analytics', usersC.status === 'critical' ? 'critical' : 'warning', 'Sudden traffic drop', `Users fell ${Math.abs(usersC.changePct)}% versus the previous ${PERIOD_DAYS} days. Check for an indexing change, a paused campaign, or broken tracking.`, cmp(usersC));
+      issue(
+        'traffic_drop',
+        'analytics',
+        usersC.status === 'critical' ? 'critical' : 'warning',
+        'Sudden traffic drop',
+        `Users fell ${Math.abs(usersC.changePct)}% versus the previous ${PERIOD_DAYS} days. Check for an indexing change, a paused campaign, or broken tracking.`,
+        cmp(usersC),
+      );
     }
-    if (!noData && eventsC.status !== 'healthy' && eventsC.changePct < 0 && usersC.status === 'healthy') {
-      issue('event_drop', 'analytics', eventsC.status === 'critical' ? 'critical' : 'warning', 'Sudden event drop', `Events fell ${Math.abs(eventsC.changePct)}% while users held steady — a GTM tag or trigger may have stopped firing.`, cmp(eventsC));
+    if (
+      !noData &&
+      eventsC.status !== 'healthy' &&
+      eventsC.changePct < 0 &&
+      usersC.status === 'healthy'
+    ) {
+      issue(
+        'event_drop',
+        'analytics',
+        eventsC.status === 'critical' ? 'critical' : 'warning',
+        'Sudden event drop',
+        `Events fell ${Math.abs(eventsC.changePct)}% while users held steady — a GTM tag or trigger may have stopped firing.`,
+        cmp(eventsC),
+      );
     }
     if (eventsC.status === 'warning' && eventsC.changePct >= 100) {
-      issue('baseline_deviation', 'data-quality', 'warning', 'Unusual event spike', `Events rose ${eventsC.changePct}% versus the previous ${PERIOD_DAYS} days. This can mean duplicate tracking.`, cmp(eventsC));
+      issue(
+        'baseline_deviation',
+        'data-quality',
+        'warning',
+        'Unusual event spike',
+        `Events rose ${eventsC.changePct}% versus the previous ${PERIOD_DAYS} days. This can mean duplicate tracking.`,
+        cmp(eventsC),
+      );
     }
 
     const counts = eventCounts(evs);
     const evItems = expectedEvents.map((name) => {
       const c = counts[name] || { d1: 0, cur7: 0, prev28: 0 };
       if (c.cur7 > 0) return { name, result: 'pass', count24h: c.d1 };
-      if (c.prev28 > 0 && !noData) issue('expected_event_missing', 'data-quality', 'warning', `Expected event "${name}" missing`, `"${name}" was received ${c.prev28} times in the 4 weeks before, but not in the last 7 days.`, null, name);
+      if (c.prev28 > 0 && !noData)
+        issue(
+          'expected_event_missing',
+          'data-quality',
+          'warning',
+          `Expected event "${name}" missing`,
+          `"${name}" was received ${c.prev28} times in the 4 weeks before, but not in the last 7 days.`,
+          null,
+          name,
+        );
       return { name, result: 'warn', count24h: c.d1 };
     });
     g.events = evItems.length
-      ? { result: worst(...evItems.map((e) => e.result)), detail: evItems.every((e) => e.result === 'pass') ? 'All expected events received in the last 7 days.' : `Missing: ${evItems.filter((e) => e.result !== 'pass').map((e) => e.name).join(', ')}.` }
+      ? {
+          result: worst(...evItems.map((e) => e.result)),
+          detail: evItems.every((e) => e.result === 'pass')
+            ? 'All expected events received in the last 7 days.'
+            : `Missing: ${evItems
+                .filter((e) => e.result !== 'pass')
+                .map((e) => e.name)
+                .join(', ')}.`,
+        }
       : { result: 'unknown', detail: 'No expected events configured.' };
 
     convItems = expectedConversions.map((name) => {
       const c = counts[name] || { d1: 0, cur7: 0, prev28: 0 };
       if (c.cur7 > 0 || c.prev28 < 4) return { name, result: 'pass', count24h: c.d1 };
-      if (!noData) issue('expected_conversion_missing', 'data-quality', 'warning', `Expected conversion "${name}" missing`, `"${name}" was recorded ${c.prev28} times in the 4 weeks before, but not in the last 7 days.`, null, name);
+      if (!noData)
+        issue(
+          'expected_conversion_missing',
+          'data-quality',
+          'warning',
+          `Expected conversion "${name}" missing`,
+          `"${name}" was recorded ${c.prev28} times in the 4 weeks before, but not in the last 7 days.`,
+          null,
+          name,
+        );
       return { name, result: 'warn', count24h: c.d1 };
     });
     if (!conversionsConfigured) {
-      g.conversions = { result: 'warn', detail: 'No conversions (key events) are set up in this GA4 property.' };
-      issue('conversions_not_configured', 'data-quality', 'warning', 'No conversions set up in GA4', 'GA4 is collecting traffic, but no key events (e.g. form submissions or calls) are marked as conversions, so leads aren’t being measured.');
+      g.conversions = {
+        result: 'warn',
+        detail: 'No conversions (key events) are set up in this GA4 property.',
+      };
+      issue(
+        'conversions_not_configured',
+        'data-quality',
+        'warning',
+        'No conversions set up in GA4',
+        'GA4 is collecting traffic, but no key events (e.g. form submissions or calls) are marked as conversions, so leads aren’t being measured.',
+      );
     } else if (convC.status === 'critical' && !noData) {
-      g.conversions = { result: 'fail', detail: `${convC.current} conversions in the last 7 complete days vs ${convC.previous} the week before.` };
-      issue('conversion_drop', 'analytics', 'critical', convC.current === 0 ? 'Conversions dropped to zero' : 'Sudden conversion drop', `Conversions went from ${convC.previous} to ${convC.current} week over week. A form, call tracking or GTM trigger may have stopped working.`, cmp(convC));
+      g.conversions = {
+        result: 'fail',
+        detail: `${convC.current} conversions in the last 7 complete days vs ${convC.previous} the week before.`,
+      };
+      issue(
+        'conversion_drop',
+        'analytics',
+        'critical',
+        convC.current === 0 ? 'Conversions dropped to zero' : 'Sudden conversion drop',
+        `Conversions went from ${convC.previous} to ${convC.current} week over week. A form, call tracking or GTM trigger may have stopped working.`,
+        cmp(convC),
+      );
     } else if (convC.status === 'warning' || convItems.some((c) => c.result !== 'pass')) {
-      g.conversions = { result: 'warn', detail: `${convC.current} conversions in the last 7 complete days vs ${convC.previous} the week before.` };
-      if (convC.status === 'warning' && !noData) issue('conversion_drop', 'analytics', 'warning', 'Conversions down', `Conversions went from ${convC.previous} to ${convC.current} week over week.`, cmp(convC));
+      g.conversions = {
+        result: 'warn',
+        detail: `${convC.current} conversions in the last 7 complete days vs ${convC.previous} the week before.`,
+      };
+      if (convC.status === 'warning' && !noData)
+        issue(
+          'conversion_drop',
+          'analytics',
+          'warning',
+          'Conversions down',
+          `Conversions went from ${convC.previous} to ${convC.current} week over week.`,
+          cmp(convC),
+        );
     } else {
-      g.conversions = { result: 'pass', detail: `${convC.current} conversions in the last 7 complete days.` };
+      g.conversions = {
+        result: 'pass',
+        detail: `${convC.current} conversions in the last 7 complete days.`,
+      };
     }
     eventsList = evItems;
   }
@@ -274,7 +531,11 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now) {
   const res = (arr, k) => (arr.find((c) => c.key === k) || {}).result;
   const sevRank = { critical: 2, warning: 1 };
   issues.sort((a, b) => sevRank[b.severity] - sevRank[a.severity]);
-  const siteStatus = issues.some((i) => i.severity === 'critical') ? 'critical' : issues.length ? 'warning' : 'healthy';
+  const siteStatus = issues.some((i) => i.severity === 'critical')
+    ? 'critical'
+    : issues.length
+      ? 'warning'
+      : 'healthy';
   const summary = {
     id: inv.siteId,
     name: inv.name,
@@ -287,7 +548,11 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now) {
     status: siteStatus,
     lastChecked: nowIso,
     checks: {
-      ga4: worst(res(tracking, 'ga4_tag'), res(tracking, 'measurement_id'), res(tracking, 'duplicate')),
+      ga4: worst(
+        res(tracking, 'ga4_tag'),
+        res(tracking, 'measurement_id'),
+        res(tracking, 'duplicate'),
+      ),
       gtm: worst(res(tracking, 'gtm_container')),
       data: worst(res(ga4, 'property_access'), res(ga4, 'recent_data')),
       events: worst(res(ga4, 'events')),
@@ -324,4 +589,5 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now) {
 }
 
 // ---- n8n glue (below this line is replaced in the Code node) ----
-if (typeof module !== 'undefined') module.exports = { analyseSite, buildDays, compare, eventCounts };
+if (typeof module !== 'undefined')
+  module.exports = { analyseSite, buildDays, compare, eventCounts };
