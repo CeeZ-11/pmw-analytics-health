@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyQuery,
   DEFAULT_QUERY,
+  groupLabel,
   groupTabs,
   statusCounts,
   issueFilterCounts,
@@ -111,6 +112,8 @@ describe('groups', () => {
     expect(queryToParams({ ...DEFAULT_QUERY, group: 'pmi' }).toString()).toBe('group=pmi');
     expect(parseQuery(new URLSearchParams('group=PMI')).group).toBe('pmi');
     expect(parseQuery(new URLSearchParams('group=<x>')).group).toBe('all');
+    expect(groupLabel('pmw')).toBe('PMW');
+    expect(groupLabel('west-coast')).toBe('West Coast');
   });
 
   it('always offers Elite and PMI tabs, with counts that add up', async () => {

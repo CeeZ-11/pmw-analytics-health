@@ -32,12 +32,16 @@ export const KNOWN_GROUPS: Array<[string, string]> = [
   ['pmi', 'PMI'],
 ];
 
+/** Display names for other groups that need special casing. */
+const GROUP_LABELS: Record<string, string> = { pmw: 'PMW' };
+
 export function groupLabel(slug: string | null | undefined): string {
   if (!slug) return 'Ungrouped';
   const known = KNOWN_GROUPS.find(([k]) => k === slug);
   return known
     ? known[1]
-    : slug.replace(/(^|-)(\w)/g, (_m, sep, c) => `${sep ? ' ' : ''}${c.toUpperCase()}`);
+    : GROUP_LABELS[slug] ||
+        slug.replace(/(^|-)(\w)/g, (_m, sep, c) => `${sep ? ' ' : ''}${c.toUpperCase()}`);
 }
 
 export function inGroup(sites: SiteSummary[], group: string): SiteSummary[] {

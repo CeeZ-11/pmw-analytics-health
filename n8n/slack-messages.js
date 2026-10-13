@@ -5,8 +5,8 @@
  * dashboard link opens that group's full list. */
 
 const DASHBOARD = 'https://ceez-11.github.io/pmw-analytics-health/#/';
-const GROUP_LABELS = { elite: 'Elite', pmi: 'PMI' };
-const GROUP_ORDER = ['elite', 'pmi'];
+const GROUP_LABELS = { elite: 'Elite', pmi: 'PMI', pmw: 'PMW' };
+const GROUP_ORDER = ['elite', 'pmi', 'pmw'];
 const MAX_LISTED = 15;
 
 function groupLabel(g) {
