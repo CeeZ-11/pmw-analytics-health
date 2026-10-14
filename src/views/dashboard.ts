@@ -12,6 +12,7 @@ import {
   applyQuery,
   groupLabel,
   groupTabs,
+  siteGroups,
   inGroup,
   ISSUE_FILTERS,
   issueFilterCounts,
@@ -279,7 +280,13 @@ function renderRows({ sites: all }: DashData, sites: SiteSummary[], state: SiteQ
     .map(
       (s) => `<tr class="is-link" data-id="${esc(s.id)}">
         <td class="sticky-col"><div class="site-cell"><span class="site-ini" aria-hidden="true">${initials(s.name)}</span>
-          <div><a class="site-name" href="${href.site(s.id)}">${esc(s.name)}</a><div class="site-domain">${esc(s.domain)}${state.group === 'all' && s.group ? ` <span class="pill muted">${esc(groupLabel(s.group))}</span>` : ''}</div></div></div></td>
+          <div><a class="site-name" href="${href.site(s.id)}">${esc(s.name)}</a><div class="site-domain">${esc(s.domain)}${
+            state.group === 'all'
+              ? siteGroups(s)
+                  .map((g) => ` <span class="pill muted">${esc(groupLabel(g))}</span>`)
+                  .join('')
+              : ''
+          }</div></div></div></td>
         <td class="c">${checkIcon(s.checks.ga4, 'GA4')}</td>
         <td class="c">${checkIcon(s.checks.gtm, 'GTM')}</td>
         <td class="c">${checkIcon(s.checks.data, 'Data')}</td>

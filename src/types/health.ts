@@ -57,8 +57,10 @@ export interface SiteInventory {
   expectedEvents: string[];
   /** GA4 key events / conversions that should be arriving. */
   expectedConversions: string[];
-  /** Portfolio the site belongs to, lowercase slug: "elite", "pmi". */
+  /** Main portfolio the site belongs to, lowercase slug: "elite", "pmi". */
   group?: string | null;
+  /** Every portfolio the site belongs to (a site can be Elite and PMI). */
+  groups?: string[];
 }
 
 /** One column per dashboard-table cell. */

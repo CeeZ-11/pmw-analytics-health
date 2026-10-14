@@ -1,7 +1,7 @@
 /* PMW Analytics Health — Slack messages for the n8n daily monitor
  * ("Build Slack messages" Code node). One alert per site with NEW critical
  * issues (compared with the previous run), then one daily summary PER GROUP
- * (Elite, PMI, …). Lists are capped so a 300-site group stays readable; the
+ * (Elite, PMI, …); a site in several groups appears in each. Lists are capped so a 300-site group stays readable; the
  * dashboard link opens that group's full list. */
 
 const DASHBOARD = 'https://ceez-11.github.io/pmw-analytics-health/#/';
@@ -16,7 +16,8 @@ function groupLabel(g) {
 function buildSlackMessages(currentRows, previousRows, now) {
   const cur = currentRows.map((row) => {
     const d = JSON.parse(row.detailJson);
-    return { row, d, group: d.group || '' };
+    const groups = d.groups && d.groups.length ? d.groups : [d.group || ''];
+    return { row, d, groups };
   });
   const prevIssueIds = {};
   for (const r of previousRows) {
@@ -42,7 +43,7 @@ function buildSlackMessages(currentRows, previousRows, now) {
     const fresh = s.d.issues.filter((i) => i.severity === 'critical' && !seen.has(i.id));
     if (!fresh.length) continue;
     messages.push(
-      `:rotating_light: *Critical: ${s.row.name}* (${s.d.domain}) · ${groupLabel(s.group)}\n` +
+      `:rotating_light: *Critical: ${s.row.name}* (${s.d.domain}) · ${s.groups.map(groupLabel).join(' + ')}\n` +
         fresh.map((i) => `• *${i.title}* — ${i.detail}`).join('\n') +
         `\n${link(s, 'Open in dashboard')}`,
     );
@@ -54,13 +55,13 @@ function buildSlackMessages(currentRows, previousRows, now) {
     day: 'numeric',
     timeZone: 'America/Los_Angeles',
   });
-  const groups = [...new Set(cur.map((s) => s.group))].sort((a, b) => {
+  const groups = [...new Set(cur.flatMap((s) => s.groups))].sort((a, b) => {
     const ia = GROUP_ORDER.indexOf(a);
     const ib = GROUP_ORDER.indexOf(b);
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
   });
   for (const g of groups) {
-    const sites = cur.filter((s) => s.group === g);
+    const sites = cur.filter((s) => s.groups.includes(g));
     const counts = { healthy: 0, warning: 0, critical: 0 };
     sites.forEach((s) => (counts[s.row.status] += 1));
     const groupLink = `${DASHBOARD}${g ? `?group=${encodeURIComponent(g)}` : ''}`;

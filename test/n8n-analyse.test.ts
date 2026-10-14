@@ -262,6 +262,17 @@ describe('n8n slack messages', () => {
     );
   });
 
+  it('puts a site that is in two groups into both summaries', () => {
+    const r = run({ inv: { ...inv, siteGroup: 'Elite, PMI' } });
+    expect(JSON.parse(r.row.summaryJson)).toMatchObject({
+      group: 'elite',
+      groups: ['elite', 'pmi'],
+    });
+    const msgs = buildSlackMessages([{ ...r.row, status: 'warning' }], [], NOW);
+    expect(msgs).toHaveLength(2);
+    expect(msgs.every((m) => m.includes('Test Site'))).toBe(true);
+  });
+
   it('caps the needs-attention list for big groups', () => {
     const many = Array.from({ length: 40 }, (_, i) => site(i, 'pmi'));
     const [msg] = buildSlackMessages(many, [], NOW);

@@ -44,17 +44,20 @@ export function groupLabel(slug: string | null | undefined): string {
         slug.replace(/(^|-)(\w)/g, (_m, sep, c) => `${sep ? ' ' : ''}${c.toUpperCase()}`);
 }
 
+/** Every group a site is in (older data only has the single `group`). */
+export function siteGroups(s: Pick<SiteSummary, 'group' | 'groups'>): string[] {
+  return s.groups?.length ? s.groups : s.group ? [s.group] : [];
+}
+
 export function inGroup(sites: SiteSummary[], group: string): SiteSummary[] {
-  return group === 'all' ? sites : sites.filter((s) => (s.group || '') === group);
+  return group === 'all' ? sites : sites.filter((s) => siteGroups(s).includes(group));
 }
 
 /** [slug, label, count] for every group tab: known groups first, then any
- *  other group present in the data. */
+ *  other group present in the data. A site in two groups counts in both. */
 export function groupTabs(sites: SiteSummary[]): Array<[string, string, number]> {
   const seen = new Set<string>(KNOWN_GROUPS.map(([k]) => k));
-  const extra = [
-    ...new Set(sites.map((s) => s.group || '').filter((g) => g && !seen.has(g))),
-  ].sort();
+  const extra = [...new Set(sites.flatMap(siteGroups).filter((g) => !seen.has(g)))].sort();
   return [...KNOWN_GROUPS.map(([k]) => k), ...extra].map((g) => [
     g,
     groupLabel(g),

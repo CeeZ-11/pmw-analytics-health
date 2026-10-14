@@ -55,6 +55,8 @@ function site(
     baseUsers,
     // Sample split so local dev shows both groups.
     group: n <= 13 ? 'elite' : 'pmi',
+    // One sample site in both groups.
+    ...(n === 13 ? { groups: ['elite', 'pmi'] } : {}),
   };
 }
 

@@ -536,14 +536,19 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now) {
     : issues.length
       ? 'warning'
       : 'healthy';
+  // siteGroup may list several groups, e.g. "elite,pmi".
+  const groups = uniq(
+    String(inv.siteGroup || '')
+      .toLowerCase()
+      .split(/[\s,;]+/)
+      .filter(Boolean),
+  );
   const summary = {
     id: inv.siteId,
     name: inv.name,
     domain: inv.domain,
-    group:
-      String(inv.siteGroup || '')
-        .trim()
-        .toLowerCase() || null,
+    group: groups[0] || null,
+    groups,
     ga4PropertyId: inv.ga4PropertyId || null,
     ga4MeasurementId: mid || null,
     gtmContainerId: gtmId || null,

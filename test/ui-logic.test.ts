@@ -4,6 +4,7 @@ import {
   DEFAULT_QUERY,
   groupLabel,
   groupTabs,
+  siteGroups,
   statusCounts,
   issueFilterCounts,
   parseQuery,
@@ -113,6 +114,9 @@ describe('groups', () => {
     expect(parseQuery(new URLSearchParams('group=PMI')).group).toBe('pmi');
     expect(parseQuery(new URLSearchParams('group=<x>')).group).toBe('all');
     expect(groupLabel('pmw')).toBe('PMW');
+    const dual = sites.find((s) => siteGroups(s).length > 1)!;
+    expect(applyQuery(sites, { ...DEFAULT_QUERY, group: 'pmi' })).toContainEqual(dual);
+    expect(elite).toContainEqual(dual);
     expect(groupLabel('west-coast')).toBe('West Coast');
   });
 
@@ -120,7 +124,9 @@ describe('groups', () => {
     const sites = await sitesP;
     const tabs = groupTabs(sites);
     expect(tabs.slice(0, 2).map((t) => t[1])).toEqual(['Elite', 'PMI']);
-    expect(tabs.reduce((n, t) => n + t[2], 0)).toBe(sites.length);
+    const both = sites.filter((s) => siteGroups(s).length > 1).length;
+    expect(both).toBe(1);
+    expect(tabs.reduce((n, t) => n + t[2], 0)).toBe(sites.length + both);
     expect(groupTabs([]).map((t) => t[2])).toEqual([0, 0]);
     const c = statusCounts(sites);
     expect(c.healthy + c.warning + c.critical).toBe(c.total);
