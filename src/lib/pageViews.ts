@@ -11,7 +11,16 @@ export interface PageViewRow {
   values: Array<number | null>;
   /** Sum of the full months (excludes the current, partial month). */
   fullMonthsTotal: number | null;
+  /** Last full month, and the one before it. */
+  lastMonth: number | null;
+  prevMonth: number | null;
+  /** Average per full month that has data. */
+  avgMonth: number | null;
+  /** Last full month vs the one before, in %; null when there's no base. */
+  changePct: number | null;
 }
+
+export type PageViewSort = 'total' | 'last' | 'avg' | 'change' | 'name';
 
 export interface PageViewTable {
   /** "YYYY-MM", oldest first. The last one is the current month so far. */
@@ -42,8 +51,20 @@ export function pageViewTable(sites: SiteSummary[]): PageViewTable {
     }
     const by = new Map(site.pageViewsByMonth.map((m) => [m.month, m.pageViews]));
     const values = months.map((m) => (by.has(m) ? by.get(m)! : null));
-    const fullMonthsTotal = values.slice(0, full).reduce<number>((t, v) => t + (v ?? 0), 0);
-    rows.push({ site, values, fullMonthsTotal });
+    const fullVals = values.slice(0, full);
+    const fullMonthsTotal = fullVals.reduce<number>((t, v) => t + (v ?? 0), 0);
+    const known = fullVals.filter((v): v is number => v != null);
+    const lastMonth = full >= 1 ? (values[full - 1] ?? null) : null;
+    const prevMonth = full >= 2 ? (values[full - 2] ?? null) : null;
+    rows.push({
+      site,
+      values,
+      fullMonthsTotal,
+      lastMonth,
+      prevMonth,
+      avgMonth: known.length ? Math.round(fullMonthsTotal / known.length) : null,
+      changePct: pctChange(lastMonth, prevMonth),
+    });
   }
   rows.sort(
     (a, b) =>
@@ -53,6 +74,56 @@ export function pageViewTable(sites: SiteSummary[]): PageViewTable {
   const fullMonthsTotal = rows.reduce((t, r) => t + (r.fullMonthsTotal ?? 0), 0);
   missing.sort((a, b) => a.name.localeCompare(b.name));
   return { months, rows, totals, fullMonthsTotal, missing };
+}
+
+function pctChange(cur: number | null, prev: number | null): number | null {
+  if (cur == null || !prev) return null;
+  return Math.round(((cur - prev) / prev) * 1000) / 10;
+}
+
+/** Summary numbers for the Total row, same shape as a site row's. */
+export function totalSummary(t: PageViewTable) {
+  const full = t.months.length - 1;
+  const lastMonth = full >= 1 ? t.totals[full - 1]! : null;
+  const prevMonth = full >= 2 ? t.totals[full - 2]! : null;
+  return {
+    lastMonth,
+    prevMonth,
+    avgMonth: full >= 1 ? Math.round(t.fullMonthsTotal / full) : null,
+    changePct: pctChange(lastMonth, prevMonth),
+  };
+}
+
+/** Rows matching a name/domain search, sorted. Ties fall back to name. */
+export function sortRows(
+  rows: PageViewRow[],
+  sort: PageViewSort,
+  dir: 'asc' | 'desc',
+  q = '',
+): PageViewRow[] {
+  const needle = q.trim().toLowerCase();
+  const key: Record<Exclude<PageViewSort, 'name'>, (r: PageViewRow) => number | null> = {
+    total: (r) => r.fullMonthsTotal,
+    last: (r) => r.lastMonth,
+    avg: (r) => r.avgMonth,
+    change: (r) => r.changePct,
+  };
+  const sign = dir === 'asc' ? 1 : -1;
+  return rows
+    .filter(
+      (r) =>
+        !needle ||
+        r.site.name.toLowerCase().includes(needle) ||
+        r.site.domain.toLowerCase().includes(needle),
+    )
+    .sort((a, b) => {
+      if (sort === 'name') return sign * a.site.name.localeCompare(b.site.name);
+      const av = key[sort](a);
+      const bv = key[sort](b);
+      // Sites without a value always go last.
+      if (av == null || bv == null) return av == null ? (bv == null ? 0 : 1) : -1;
+      return sign * (av - bv) || a.site.name.localeCompare(b.site.name);
+    });
 }
 
 /** "2026-10" → "Oct 2026". */

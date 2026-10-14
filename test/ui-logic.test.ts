@@ -15,7 +15,13 @@ import { checkIcon, statusBadge } from '../src/lib/status';
 import { esc } from '../src/lib/dom';
 import { fmtPct, fmtRelative } from '../src/lib/format';
 import { createMockProvider } from '../src/services/mockProvider';
-import { monthLabel, pageViewsCsv, pageViewTable } from '../src/lib/pageViews';
+import {
+  monthLabel,
+  pageViewsCsv,
+  pageViewTable,
+  sortRows,
+  totalSummary,
+} from '../src/lib/pageViews';
 import type { SiteSummary } from '../src/types/health';
 
 const sitesP = createMockProvider({
@@ -183,6 +189,38 @@ describe('monthly page views', () => {
     );
     expect(lines[1]).toBe(`"'=HYPERLINK(""x"")",evil.example,Elite,5,1,5`);
     expect(lines[2]).toBe('Total (1 sites),,,5,1,5');
+  });
+
+  it('computes last month, change and average, and sorts / searches rows', () => {
+    const t = pageViewTable([
+      site('a', [
+        ['2026-08', 100],
+        ['2026-09', 150],
+        ['2026-10', 9],
+      ]),
+      site('b', [
+        ['2026-08', 400],
+        ['2026-09', 200],
+        ['2026-10', 9],
+      ]),
+      site('c', [
+        ['2026-09', 50],
+        ['2026-10', 1],
+      ]),
+    ]);
+    const a = t.rows.find((r) => r.site.id === 'a')!;
+    expect(a).toMatchObject({ lastMonth: 150, prevMonth: 100, avgMonth: 125, changePct: 50 });
+    expect(t.rows.find((r) => r.site.id === 'c')!.changePct).toBeNull();
+    expect(totalSummary(t)).toEqual({
+      lastMonth: 400,
+      prevMonth: 500,
+      avgMonth: 450,
+      changePct: -20,
+    });
+    expect(sortRows(t.rows, 'change', 'desc').map((r) => r.site.id)).toEqual(['a', 'b', 'c']);
+    expect(sortRows(t.rows, 'change', 'asc').map((r) => r.site.id)).toEqual(['b', 'a', 'c']);
+    expect(sortRows(t.rows, 'name', 'asc').map((r) => r.site.id)).toEqual(['a', 'b', 'c']);
+    expect(sortRows(t.rows, 'total', 'desc', 'B.EXAMPLE').map((r) => r.site.id)).toEqual(['b']);
   });
 
   it('mock sites carry 13 months, current month last', async () => {

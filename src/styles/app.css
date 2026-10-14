@@ -1316,3 +1316,54 @@ table.tbl {
 .group-tabs button.is-active .n {
   color: var(--accent-2);
 }
+
+/* ------------------------------------------------ monthly page views */
+.pv-table tr.total-row td {
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line-2);
+}
+.pv-table tr.total-row td.sticky-col {
+  background: var(--panel-2);
+}
+.th-sort {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: inherit;
+}
+.th-sort:hover,
+.th-sort.is-active {
+  color: var(--text);
+}
+.th-sort:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.th-sort .arr {
+  font-size: 10px;
+  min-width: 8px;
+}
+.tbl svg.spark,
+svg.spark {
+  display: block;
+  width: 96px;
+  height: 24px;
+  overflow: visible;
+}
+.spark polyline {
+  fill: none;
+  stroke: var(--accent-2);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.spark circle {
+  fill: var(--accent-2);
+}
+.chart-legend i.partial {
+  background: rgba(90, 162, 255, 0.06);
+  border: 1px dashed rgba(90, 162, 255, 0.55);
+}

@@ -17,6 +17,12 @@ export interface ChartOptions {
   /** Shade the last N points (the "current period" n8n compared). */
   highlightLast?: number;
   height?: number;
+  /** Draw the last bar faded with an outline (e.g. a month still filling in). */
+  partialLast?: boolean;
+  /** Axis label for a point (default: the day, e.g. "Oct 3"). */
+  xLabel?: (p: SeriesPoint, i: number, n: number) => string;
+  /** Second tooltip line (default: weekday + day). */
+  tipLabel?: (p: SeriesPoint, i: number) => string;
 }
 
 const C = {
@@ -111,7 +117,11 @@ function draw(
   const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(iw / 64))));
   points.forEach((p, i) => {
     if ((n - 1 - i) % every !== 0) return;
-    const t = n <= 7 ? fmtDay(p.date, 'weekday') : fmtDay(p.date);
+    const t = opts.xLabel
+      ? opts.xLabel(p, i, n)
+      : n <= 7
+        ? fmtDay(p.date, 'weekday')
+        : fmtDay(p.date);
     const tw = ctx.measureText(t).width;
     ctx.fillText(t, Math.min(Math.max(x(i) - tw / 2, pad.l - 4), w - pad.r - tw), h - 7);
   });
@@ -120,9 +130,20 @@ function draw(
     const bw = Math.max(2, Math.min(28, slot * 0.62));
     points.forEach((p, i) => {
       const top = y(p.value);
+      const partial = opts.partialLast && i === n - 1;
       ctx.fillStyle =
-        i === hover || (opts.highlightLast && i >= n - opts.highlightLast) ? C.barHi : C.bar;
+        i === hover || (opts.highlightLast && i >= n - opts.highlightLast)
+          ? C.barHi
+          : partial
+            ? C.band
+            : C.bar;
       ctx.fillRect(x(i) - bw / 2, top, bw, pad.t + ih - top);
+      if (partial) {
+        ctx.strokeStyle = C.bar;
+        ctx.setLineDash([3, 2]);
+        ctx.strokeRect(x(i) - bw / 2 + 0.5, top + 0.5, bw - 1, pad.t + ih - top - 1);
+        ctx.setLineDash([]);
+      }
     });
   } else {
     const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ih);
@@ -190,7 +211,7 @@ export function renderChart(
     const p = points[i]!;
     showTip(
       e,
-      `<b>${esc(fmtInt(p.value))}</b> ${esc(opts.label.toLowerCase())}<br><span class="c-muted">${esc(fmtDay(p.date, 'weekday'))}, ${esc(fmtDay(p.date))}</span>`,
+      `<b>${esc(fmtInt(p.value))}</b> ${esc(opts.label.toLowerCase())}<br><span class="c-muted">${esc(opts.tipLabel ? opts.tipLabel(p, i) : `${fmtDay(p.date, 'weekday')}, ${fmtDay(p.date)}`)}</span>`,
     );
   };
   canvas.onmouseleave = () => {
