@@ -31,11 +31,13 @@ are defined in one place: `ENDPOINTS` in `src/services/apiProvider.ts`.
 
 Instance: `https://rentvine.app.n8n.cloud` · project: personal (Seamor Estrabon) · folder **PMW Analytics Health**
 
-| Piece                                                | What it is                                                                                                                                                                                                            |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Data table `pmw_health_sites`                        | One row per site: `siteId`, `name`, `status`, `lastChecked`, `isSample`, and the JSON the API serves (`summaryJson`, `detailJson`, `historyJson`). The monitoring workflow should upsert into this table on `siteId`. |
-| Workflow **PMW Analytics Health — Dashboard API**    | The four GET webhooks below, published. CORS: `https://ceez-11.github.io` + localhost dev ports.                                                                                                                      |
-| Workflow **PMW Analytics Health — Seed sample data** | Manual run: writes 25 fictional sites with `isSample = true`. Delete those rows once real monitoring data exists.                                                                                                     |
+| Piece                                                    | What it is                                                                                                                                                                                                            |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Data table `pmw_health_sites`                            | One row per site: `siteId`, `name`, `status`, `lastChecked`, `isSample`, and the JSON the API serves (`summaryJson`, `detailJson`, `historyJson`). The monitoring workflow should upsert into this table on `siteId`. |
+| Workflow **PMW Analytics Health — Dashboard API**        | The four GET webhooks below, published. CORS: `https://ceez-11.github.io` + localhost dev ports.                                                                                                                      |
+| Workflow **PMW Analytics Health — Daily monitor**        | 6:00 AM Pacific. Reads active rows of `pmw_health_inventory`, runs **Check one site** for each, saves to `pmw_health_sites`, posts to Slack.                                                                          |
+| Workflow **PMW Analytics Health — Check one site**       | Sub-workflow, one run per site: homepage + GTM container, GA4 (property, daily/events/monthly reports, live key events) via the site's `ga4Login`, then `n8n/analyse-site.js`.                                        |
+| Workflow **PMW — All GA4 properties: page views review** | Manual: lists every GA4 property the 4 PMW logins can see with monthly page views into `pmw_all_properties` (the All PMW sites page).                                                                                 |
 
 Base URL: `https://rentvine.app.n8n.cloud/webhook/pmw-analytics-health`
 
@@ -276,8 +278,12 @@ decision that overrides those rules for everyone.
 - **Content-Security-Policy** (added at build, see `vite.config.ts`): scripts
   only from the site, network requests only to the site and the n8n origin.
 - **CORS** limits browser reads to `https://ceez-11.github.io` and localhost.
-- **GA4 access** is a dedicated service account with Viewer (read-only) role
-  and the `analytics.readonly` scope.
+- **GA4 access** goes through the shared PMW Google logins
+  (pmw.webmaster@kohva.com by default; a site's `ga4Login` column picks
+  pmw.analytics@kohva.com, pmw.analytics1/2@rentvine.com or `service-account`),
+  each connected in n8n with only the `analytics.readonly` scope. The OAuth
+  app lives in the `pmw-analytics-health` Google Cloud project and must be
+  published ("In production"), or Google expires the sign-ins after 7 days.
 - **Logs:** the Dashboard API saves no execution data on success; the daily
   monitor posts to Slack if a run fails.
 - **Slack** channel `#pmw-analytics-monitor` is private.

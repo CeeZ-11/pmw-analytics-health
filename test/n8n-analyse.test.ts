@@ -9,7 +9,10 @@ import { assertHistory, assertSiteDetail, assertSiteSummary } from '../src/servi
 const src = readFileSync(resolve(process.cwd(), 'n8n/analyse-site.js'), 'utf8').split(
   '// ---- n8n glue',
 )[0];
-const { analyseSite } = new Function(`${src}\nreturn { analyseSite };`)() as {
+const { analyseSite, withLiveConversions } = new Function(
+  `${src}\nreturn { analyseSite, withLiveConversions };`,
+)() as {
+  withLiveConversions: (inv: object, keyEvents: unknown) => { expectedConversions?: string };
   analyseSite: (...a: unknown[]) => {
     status: string;
     summaryJson: string;
@@ -145,6 +148,21 @@ describe('n8n analyse-site', () => {
     expect(
       run({ daily: { error: { message: '403 PERMISSION_DENIED' } } }).summary.pageViewsByMonth,
     ).toBeNull();
+  });
+
+  it('takes conversions from live GA4 key events, ignoring GA4 defaults', () => {
+    const ke = {
+      keyEvents: [
+        { eventName: 'purchase' },
+        { eventName: 'phone_call' },
+        { eventName: 'form_submission' },
+        { eventName: 'phone_call' },
+      ],
+    };
+    expect(withLiveConversions(inv, ke).expectedConversions).toBe('phone_call,form_submission');
+    expect(withLiveConversions(inv, {}).expectedConversions).toBe('');
+    expect(withLiveConversions(inv, { error: { message: '403' } })).toBe(inv);
+    expect(withLiveConversions(inv, null)).toBe(inv);
   });
 
   it('fills days GA4 omits (all-zero rows) with zeros', () => {

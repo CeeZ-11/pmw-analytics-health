@@ -1,7 +1,7 @@
-/* PMW Analytics Health — per-site analysis used by the n8n "Daily monitor"
- * workflow ("Analyse sites" Code node). Kept in the repo so the rules are
- * versioned and testable; the Code node holds a copy of everything above the
- * "n8n glue" marker.
+/* PMW Analytics Health — per-site analysis, run by the n8n "Check one site"
+ * sub-workflow ("Analyse site" Code node) once per site for the Daily monitor.
+ * Kept in the repo so the rules are versioned and testable; the Code node
+ * holds a copy of everything above the "n8n glue" marker.
  *
  * Input per site: inventory row + raw responses from the homepage fetch, the
  * GTM container, the GA4 Admin property, the GA4 daily report, the GA4
@@ -133,6 +133,20 @@ function buildMonths(monthly, tz, now) {
     out.push({ month, pageViews: byMonth[month] || 0 });
   }
   return out;
+}
+
+/* Conversions come from the property's GA4 key events, read live on every
+ * run, so new sites need no separate discovery step. GA4 creates these three
+ * on new properties automatically; none fire from a PM website on its own. */
+const IGNORED_KEY_EVENTS = ['purchase', 'qualify_lead', 'close_convert_lead'];
+function withLiveConversions(inv, keyEvents) {
+  if (!keyEvents || errText(keyEvents)) return inv; // keep the inventory's list
+  const names = uniq(
+    (keyEvents.keyEvents || [])
+      .map((k) => k && k.eventName)
+      .filter((n) => n && !IGNORED_KEY_EVENTS.includes(n)),
+  );
+  return { ...inv, expectedConversions: names.join(',') };
 }
 
 const RANK = { pass: 0, unknown: 1, warn: 2, fail: 3 };
@@ -333,7 +347,7 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now, monthly) {
   const conversionsConfigured = expectedConversions.length > 0;
   if (!inv.ga4PropertyId) {
     for (const k of ['property_access', 'recent_data', 'events', 'conversions'])
-      g[k] = { result: 'unknown', detail: 'No GA4 property linked — run GA4 discovery.' };
+      g[k] = { result: 'unknown', detail: 'No GA4 property in the inventory for this site.' };
     issue(
       'ga4_not_linked',
       'analytics',
@@ -355,7 +369,7 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now, monthly) {
         'analytics',
         'critical',
         'GA4 property inaccessible',
-        `The monitoring service account can't read GA4 property ${inv.ga4PropertyId} (${ga4Err}). Re-add it as a Viewer in GA4 → Admin → Property access management.`,
+        `The monitor can't read GA4 property ${inv.ga4PropertyId} with ${inv.ga4Login || 'pmw.webmaster@kohva.com'} (${ga4Err}). Give that login Viewer access in GA4 → Admin → Property access management, or set the site's ga4Login to a PMW login that can see it.`,
       );
     else
       issue(
@@ -624,4 +638,11 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now, monthly) {
 
 // ---- n8n glue (below this line is replaced in the Code node) ----
 if (typeof module !== 'undefined')
-  module.exports = { analyseSite, buildDays, buildMonths, compare, eventCounts };
+  module.exports = {
+    analyseSite,
+    buildDays,
+    buildMonths,
+    compare,
+    eventCounts,
+    withLiveConversions,
+  };
