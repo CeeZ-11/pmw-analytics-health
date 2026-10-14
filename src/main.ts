@@ -6,6 +6,7 @@ import { hideTip } from './lib/chart';
 import { renderDashboard } from './views/dashboard';
 import { renderSiteDetail } from './views/siteDetail';
 import { renderIntegration } from './views/integration';
+import { renderPageViews } from './views/pageViews';
 import { notFound } from './components/ui';
 import { setAccessKey } from './services/accessKey';
 
@@ -14,12 +15,17 @@ import { setAccessKey } from './services/accessKey';
 let navToken = 0;
 
 function renderChrome(route: Route) {
-  const rail = { dashboard: ICONS.dashboard, integration: ICONS.plug } as const;
+  const rail = {
+    dashboard: ICONS.dashboard,
+    'page-views': ICONS.chart,
+    integration: ICONS.plug,
+  } as const;
+  const section =
+    route.name === 'integration' || route.name === 'page-views' ? route.name : 'dashboard';
   $$<HTMLAnchorElement>('.rail-btn[data-nav]').forEach((a) => {
     const key = a.dataset.nav as keyof typeof rail;
     if (!a.innerHTML) a.innerHTML = rail[key];
-    const active =
-      key === 'integration' ? route.name === 'integration' : route.name !== 'integration';
+    const active = key === section;
     a.classList.toggle('is-active', active);
     if (active) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
@@ -46,6 +52,9 @@ async function route() {
       return renderDashboard(ctx, r.params);
     case 'site':
       return renderSiteDetail(ctx, r.id, r.params);
+    case 'page-views':
+      document.title = 'Monthly page views · PMW Analytics Health';
+      return renderPageViews(ctx, r.params);
     case 'integration':
       document.title = 'Data source · PMW Analytics Health';
       return renderIntegration(ctx);

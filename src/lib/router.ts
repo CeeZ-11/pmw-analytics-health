@@ -6,6 +6,7 @@ export type Route =
   | { name: 'dashboard'; params: URLSearchParams }
   | { name: 'site'; id: string; params: URLSearchParams }
   | { name: 'integration'; params: URLSearchParams }
+  | { name: 'page-views'; params: URLSearchParams }
   | { name: 'not-found'; params: URLSearchParams };
 
 export function parseHash(hash: string): Route {
@@ -26,6 +27,7 @@ export function parseHash(hash: string): Route {
   if (segs[0] === 'sites' && segs.length === 2 && segs[1])
     return { name: 'site', id: segs[1], params };
   if (segs[0] === 'integration' && segs.length === 1) return { name: 'integration', params };
+  if (segs[0] === 'page-views' && segs.length === 1) return { name: 'page-views', params };
   return { name: 'not-found', params };
 }
 
@@ -34,6 +36,8 @@ export const href = {
   site: (id: string, params?: URLSearchParams) =>
     `#/sites/${encodeURIComponent(id)}${params && [...params].length ? `?${params}` : ''}`,
   integration: () => '#/integration',
+  pageViews: (params?: URLSearchParams) =>
+    `#/page-views${params && [...params].length ? `?${params}` : ''}`,
 };
 
 /** Update the hash without adding a history entry (filters, tabs). */

@@ -77,8 +77,23 @@ const okEvents = eventsReport({
   phone_call: [1, 7, 30],
 });
 
+const monthlyReport = {
+  rows: [
+    { dimensionValues: [{ value: '202609' }], metricValues: [{ value: '4200' }] },
+    { dimensionValues: [{ value: '202510' }], metricValues: [{ value: '3900' }] },
+    { dimensionValues: [{ value: '202610' }], metricValues: [{ value: '120' }] },
+  ],
+};
+
 function run(
-  over: Partial<{ inv: object; home: object; gtm: object; daily: object; evs: object }> = {},
+  over: Partial<{
+    inv: object;
+    home: object;
+    gtm: object;
+    daily: object;
+    evs: object;
+    monthly: object;
+  }> = {},
 ) {
   const row = analyseSite(
     over.inv ?? inv,
@@ -88,6 +103,7 @@ function run(
     over.daily ?? dailyReport(steady),
     over.evs ?? okEvents,
     NOW,
+    over.monthly ?? monthlyReport,
   );
   return {
     row,
@@ -116,6 +132,19 @@ describe('n8n analyse-site', () => {
     expect(r.history.days).toHaveLength(90);
     expect(r.history.days.at(-1).date).toBe('2026-09-30');
     expect(r.detail.last24h.sessions).toBe(300);
+  });
+
+  it('reports 12 full months + this month of page views, zero-filling gaps', () => {
+    const pv = run().summary.pageViewsByMonth;
+    expect(pv).toHaveLength(13);
+    expect(pv[0]).toEqual({ month: '2025-10', pageViews: 3900 });
+    expect(pv[11]).toEqual({ month: '2026-09', pageViews: 4200 });
+    expect(pv[12]).toEqual({ month: '2026-10', pageViews: 120 });
+    expect(pv[5].pageViews).toBe(0);
+    expect(run({ monthly: { error: { message: '500' } } }).summary.pageViewsByMonth).toBeNull();
+    expect(
+      run({ daily: { error: { message: '403 PERMISSION_DENIED' } } }).summary.pageViewsByMonth,
+    ).toBeNull();
   });
 
   it('fills days GA4 omits (all-zero rows) with zeros', () => {

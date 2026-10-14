@@ -84,8 +84,18 @@ export interface SiteSummary extends SiteInventory {
   issueCategories: IssueCategory[];
   /** True when at least one open issue concerns conversions/key events. */
   hasConversionIssue: boolean;
+  /** GA4 page views per calendar month, oldest first: the last 12 full months
+   *  plus the current month so far. Null/absent when GA4 couldn't be read. */
+  pageViewsByMonth?: MonthlyPageViews[] | null;
   /** True for seed/sample rows served by n8n before real monitoring runs. */
   isSample?: boolean;
+}
+
+export interface MonthlyPageViews {
+  /** Calendar month, "YYYY-MM". */
+  month: string;
+  /** GA4 "Views" (screenPageViews) for that month. */
+  pageViews: number;
 }
 
 /** One line in a check group on the site detail page. */

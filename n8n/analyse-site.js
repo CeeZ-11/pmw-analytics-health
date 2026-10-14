@@ -4,8 +4,8 @@
  * "n8n glue" marker.
  *
  * Input per site: inventory row + raw responses from the homepage fetch, the
- * GTM container, the GA4 Admin property, the GA4 daily report and the GA4
- * events-by-name report. Output: one pmw_health_sites row (summaryJson /
+ * GTM container, the GA4 Admin property, the GA4 daily report, the GA4
+ * events-by-name report and the GA4 monthly page-views report. Output: one pmw_health_sites row (summaryJson /
  * detailJson / historyJson in the shapes of src/types/health.ts). */
 
 const HISTORY_DAYS = 90;
@@ -114,12 +114,33 @@ function eventCounts(evs) {
   return out;
 }
 
+/* Page views per calendar month for the last 12 full months plus the current
+ * month so far, oldest first. GA4 omits months with no data, so those are
+ * filled with 0. Null when the report failed (the dashboard shows "—"). */
+const PAGE_VIEW_MONTHS = 13;
+function buildMonths(monthly, tz, now) {
+  if (!monthly || errText(monthly) || !Array.isArray(monthly.rows || [])) return null;
+  const byMonth = {};
+  for (const row of monthly.rows || []) {
+    const ym = row.dimensionValues[0].value; // YYYYMM
+    byMonth[`${ym.slice(0, 4)}-${ym.slice(4, 6)}`] = num(row.metricValues[0].value);
+  }
+  const [y, m] = isoDayInTz(now, tz).split('-').map(Number);
+  const out = [];
+  for (let i = PAGE_VIEW_MONTHS - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(y, m - 1 - i, 1));
+    const month = d.toISOString().slice(0, 7);
+    out.push({ month, pageViews: byMonth[month] || 0 });
+  }
+  return out;
+}
+
 const RANK = { pass: 0, unknown: 1, warn: 2, fail: 3 };
 function worst(...rs) {
   return rs.reduce((w, r) => (r && RANK[r] > RANK[w] ? r : w), 'pass');
 }
 
-function analyseSite(inv, home, gtm, prop, daily, evs, now) {
+function analyseSite(inv, home, gtm, prop, daily, evs, now, monthly) {
   const nowIso = now.toISOString();
   const issues = [];
   const issue = (code, category, severity, title, detail, comparison, key = '') =>
@@ -573,6 +594,10 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now) {
     },
     issueCategories: uniq(issues.map((i) => i.category)),
     hasConversionIssue: issues.some((i) => /conversion/.test(i.code)),
+    pageViewsByMonth:
+      inv.ga4PropertyId && !ga4Err && daily
+        ? buildMonths(monthly, (prop && prop.timeZone) || 'America/Los_Angeles', now)
+        : null,
     isSample: false,
   };
   const detail = {
@@ -599,4 +624,4 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now) {
 
 // ---- n8n glue (below this line is replaced in the Code node) ----
 if (typeof module !== 'undefined')
-  module.exports = { analyseSite, buildDays, compare, eventCounts };
+  module.exports = { analyseSite, buildDays, buildMonths, compare, eventCounts };

@@ -52,6 +52,15 @@ export function assertSiteSummary(v: unknown, what = 'sites'): SiteSummary {
   if (!['healthy', 'warning', 'critical'].includes(v.status as string)) {
     fail(what, `"status" must be healthy, warning or critical (got "${String(v.status)}")`);
   }
+  const pv = v.pageViewsByMonth;
+  if (
+    pv != null &&
+    !(
+      Array.isArray(pv) &&
+      pv.every((m) => isObj(m) && typeof m.month === 'string' && typeof m.pageViews === 'number')
+    )
+  )
+    fail(what, '"pageViewsByMonth" must be a list of { month, pageViews }');
   return v as unknown as SiteSummary;
 }
 

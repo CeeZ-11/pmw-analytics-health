@@ -15,6 +15,8 @@ import { checkIcon, statusBadge } from '../src/lib/status';
 import { esc } from '../src/lib/dom';
 import { fmtPct, fmtRelative } from '../src/lib/format';
 import { createMockProvider } from '../src/services/mockProvider';
+import { monthLabel, pageViewsCsv, pageViewTable } from '../src/lib/pageViews';
+import type { SiteSummary } from '../src/types/health';
 
 const sitesP = createMockProvider({
   latencyMs: 0,
@@ -130,5 +132,64 @@ describe('groups', () => {
     expect(groupTabs([]).map((t) => t[2])).toEqual([0, 0]);
     const c = statusCounts(sites);
     expect(c.healthy + c.warning + c.critical).toBe(c.total);
+  });
+});
+
+describe('monthly page views', () => {
+  const site = (id: string, months: Array<[string, number]> | null, group = 'elite') =>
+    ({
+      id,
+      name: id === 'evil' ? '=HYPERLINK("x")' : `Site ${id}`,
+      domain: `${id}.example`,
+      group,
+      pageViewsByMonth: months && months.map(([month, pageViews]) => ({ month, pageViews })),
+    }) as unknown as SiteSummary;
+
+  it('lines months up, totals full months only, and lists sites without data', () => {
+    const t = pageViewTable([
+      site('a', [
+        ['2026-08', 100],
+        ['2026-09', 200],
+        ['2026-10', 50],
+      ]),
+      site('b', [
+        ['2026-09', 1000],
+        ['2026-10', 10],
+      ]),
+      site('c', null),
+    ]);
+    expect(t.months).toEqual(['2026-08', '2026-09', '2026-10']);
+    expect(t.rows.map((r) => r.site.id)).toEqual(['b', 'a']);
+    expect(t.rows[0]!.values).toEqual([null, 1000, 10]);
+    expect(t.rows[1]!.fullMonthsTotal).toBe(300);
+    expect(t.totals).toEqual([100, 1200, 60]);
+    expect(t.fullMonthsTotal).toBe(1300);
+    expect(t.missing.map((s) => s.id)).toEqual(['c']);
+    expect(monthLabel('2026-10')).toBe('Oct 2026');
+  });
+
+  it('exports CSV with a total row and no spreadsheet formulas', () => {
+    const csv = pageViewsCsv(
+      pageViewTable([
+        site('evil', [
+          ['2026-09', 5],
+          ['2026-10', 1],
+        ]),
+      ]),
+    );
+    const lines = csv.trim().split('\r\n');
+    expect(lines[0]).toBe(
+      'Site,Domain,Groups,Sep 2026,Oct 2026 (to date),Total (last 1 full months)',
+    );
+    expect(lines[1]).toBe(`"'=HYPERLINK(""x"")",evil.example,Elite,5,1,5`);
+    expect(lines[2]).toBe('Total (1 sites),,,5,1,5');
+  });
+
+  it('mock sites carry 13 months, current month last', async () => {
+    const sites = await sitesP;
+    const withData = sites.filter((s) => s.pageViewsByMonth?.length);
+    expect(withData.length).toBeGreaterThan(0);
+    expect(withData[0]!.pageViewsByMonth).toHaveLength(13);
+    expect(withData[0]!.pageViewsByMonth!.at(-1)!.month).toBe('2026-10');
   });
 });

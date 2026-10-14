@@ -132,6 +132,15 @@ One row per monitored site (the dashboard table). Array of `SiteSummary`.
 `issueCategories` / `hasConversionIssue` power the dashboard's
 Tracking / Analytics / Data quality / Conversion filters.
 
+Optional fields:
+
+- `groups` — every portfolio the site is in (`["elite", "pmi"]`); `group` is
+  the first one. The inventory's `siteGroup` takes a comma list.
+- `pageViewsByMonth` — GA4 page views (`screenPageViews`) per calendar month,
+  oldest first: the last 12 full months plus the current month so far, e.g.
+  `[{ "month": "2025-10", "pageViews": 3900 }, …]`. `null` when GA4 couldn't be
+  read. Powers the **Monthly page views** page (`#/page-views`) and its CSV.
+
 ## `GET /site?id={siteId}`
 
 Everything in `SiteSummary`, plus:

@@ -14,6 +14,7 @@ import type {
   Issue,
   IssueCategory,
   MetricTotals,
+  MonthlyPageViews,
   PeriodComparison,
   SiteDetail,
   SiteHistory,
@@ -40,6 +41,21 @@ function rng(seed: number) {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+/** 12 full months + the current month so far, shaped like the n8n output. */
+function buildMonths(s: MockSite, now: Date): MonthlyPageViews[] | null {
+  if (SCENARIOS[s.scenario].noGa4Data) return null;
+  const rand = rng(hashSeed(`${s.id}-months`));
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  return Array.from({ length: 13 }, (_, i) => {
+    const d = new Date(Date.UTC(y, m - 12 + i, 1));
+    const full = Math.round(s.baseUsers * 30 * 2.3 * (0.8 + rand() * 0.4));
+    const partial = i === 12 ? Math.max(0, now.getDate() - 1) / daysInMonth : 1;
+    return { month: d.toISOString().slice(0, 7), pageViews: Math.round(full * partial) };
+  });
 }
 
 function isoDate(d: Date): string {
@@ -262,6 +278,7 @@ function buildDetail(s: MockSite, index: number, now: Date): SiteDetail {
     },
     issueCategories,
     hasConversionIssue: issues.some((x) => /conversion/.test(x.code)),
+    pageViewsByMonth: buildMonths(s, now),
     tracking,
     ga4,
     last24h,
