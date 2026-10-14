@@ -1367,3 +1367,75 @@ svg.spark {
   background: rgba(90, 162, 255, 0.06);
   border: 1px dashed rgba(90, 162, 255, 0.55);
 }
+
+/* ------------------------------------------------ all PMW sites */
+.scope-tabs {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 12px;
+}
+.scope-tabs a {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  color: var(--text-2);
+  text-decoration: none;
+  font-size: 13px;
+}
+.scope-tabs a + a {
+  border-left: 1px solid var(--line);
+}
+.scope-tabs a:hover {
+  color: var(--text);
+}
+.scope-tabs a.is-active {
+  background: var(--info-bg);
+  color: var(--accent-2);
+}
+.rules {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.rules label {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+.rules input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+.rules .hint {
+  color: var(--text-3);
+  font-size: 12px;
+}
+.ap-table td {
+  white-space: normal;
+  vertical-align: top;
+}
+.ap-table td.site {
+  color: var(--text-3);
+  font-size: 12px;
+  word-break: break-all;
+  min-width: 180px;
+}
+.ap-table tr.is-out td {
+  opacity: 0.5;
+}
+.ap-table tr.is-out td.inc {
+  opacity: 1;
+}
+.ap-table .acct {
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.ap-more {
+  padding: 10px 14px;
+}
+.ap-table td.when,
+.ap-table td.r {
+  white-space: nowrap;
+}

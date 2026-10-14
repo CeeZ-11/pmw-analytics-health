@@ -22,7 +22,14 @@ import {
   sortRows,
   totalSummary,
 } from '../src/lib/pageViews';
-import type { SiteSummary } from '../src/types/health';
+import type { AllPropertiesReport, GaProperty, SiteSummary } from '../src/types/health';
+import {
+  allPropertiesCsv,
+  analyseProperties,
+  DEFAULT_RULES,
+  isCounted,
+  totals,
+} from '../src/lib/allProperties';
 
 const sitesP = createMockProvider({
   latencyMs: 0,
@@ -229,5 +236,92 @@ describe('monthly page views', () => {
     expect(withData.length).toBeGreaterThan(0);
     expect(withData[0]!.pageViewsByMonth).toHaveLength(13);
     expect(withData[0]!.pageViewsByMonth!.at(-1)!.month).toBe('2026-10');
+  });
+});
+
+describe('all PMW sites', () => {
+  const months = ['2026-06', '2026-07', '2026-08', '2026-09', '2026-10'];
+  const prop = (id: string, over: Partial<GaProperty> = {}): GaProperty => ({
+    id,
+    account: `Account ${id}`,
+    name: `Property ${id}`,
+    site: `https://www.site-${id}.example/`,
+    mids: `G-${id}`,
+    logins: [0],
+    m: [100, 100, 100, 100, 50],
+    last: '2026-10',
+    ...over,
+  });
+  const report = (properties: GaProperty[]): AllPropertiesReport => ({
+    generatedAt: '2026-10-15T00:00:00Z',
+    runAt: '2026-10-14T22:30:00Z',
+    months,
+    logins: ['a@example.com'],
+    properties,
+  });
+
+  it('flags duplicates, roll-ups, internal, stale and empty properties', () => {
+    const rows = analyseProperties(
+      report([
+        prop('big', { site: 'https://www.same.example/' }),
+        prop('small', { site: 'http://same.example', m: [1, 1, 1, 1, 0] }),
+        prop('roll', { mids: 'G-AAA | G-4K79NRW975' }),
+        prop('rv', { account: 'Rentvine' }),
+        prop('old', { m: [100, 0, 0, 0, 0], last: '2026-06' }),
+        prop('none', { m: [0, 0, 0, 0, 0], last: null }),
+      ]),
+    );
+    const f = Object.fromEntries(rows.map((r) => [r.id, r]));
+    expect(f.small!.dupOf).toBe('big');
+    expect(f.big!.dupOf).toBeNull();
+    expect(f.big!.domain).toBe('same.example');
+    expect(f.roll!.rollup).toBe(true);
+    expect(f.rv!.internal).toBe(true);
+    expect(f.old!.stale).toBe(true);
+    expect(f.none).toMatchObject({ zero: true, stale: false });
+    expect(f.big!.total).toBe(400);
+  });
+
+  it('counts by device choice, then team decision, then rules', () => {
+    const rows = analyseProperties(
+      report([
+        prop('a'),
+        prop('roll', { mids: 'G-4K79NRW975' }),
+        prop('t', { team: { counted: false, note: 'old' } }),
+      ]),
+    );
+    const counted = (local = {}, rules = DEFAULT_RULES) =>
+      rows.filter((p) => isCounted(p, rules, local)).map((p) => p.id);
+    expect(counted()).toEqual(['a']);
+    expect(counted({}, { ...DEFAULT_RULES, rollup: false })).toEqual(['a', 'roll']);
+    expect(counted({ a: false, t: true })).toEqual(['t']);
+    const t = totals(
+      rows.filter((p) => isCounted(p, DEFAULT_RULES)),
+      months,
+    );
+    expect(t).toMatchObject({ count: 1, total: 400, avg: 100, last: 100, changePct: 0 });
+    expect(t.byMonth).toEqual([100, 100, 100, 100, 50]);
+  });
+
+  it('exports every property with why it was left out', () => {
+    const r = report([prop('a'), prop('rv', { account: 'Rentvine', name: '=cmd' })]);
+    const csv = allPropertiesCsv(analyseProperties(r), r, DEFAULT_RULES, {}, monthLabel)
+      .trim()
+      .split('\r\n');
+    expect(csv[0]).toContain('Oct 2026 (to date),Total (last 4 full months)');
+    expect(csv[1]!.startsWith("No,Not a client site,Rentvine,'=cmd,rv")).toBe(true);
+    expect(csv[2]!.startsWith('Yes,,Account a,Property a,a,')).toBe(true);
+  });
+
+  it('mock data covers every rule', async () => {
+    const r = await createMockProvider({
+      latencyMs: 0,
+      now: () => new Date('2026-10-15T09:00:00'),
+    }).getAllProperties();
+    const rows = analyseProperties(r);
+    expect(r.months).toHaveLength(13);
+    for (const k of ['rollup', 'internal', 'stale', 'zero'] as const)
+      expect(rows.some((p) => p[k])).toBe(true);
+    expect(rows.some((p) => p.dupOf)).toBe(true);
   });
 });

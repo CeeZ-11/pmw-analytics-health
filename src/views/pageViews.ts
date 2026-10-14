@@ -20,7 +20,7 @@ import {
   type PageViewTable,
 } from '../lib/pageViews';
 import { href, replaceHash } from '../lib/router';
-import { errorState, loading, pageHead, sampleNotice } from '../components/ui';
+import { errorState, loading, pageHead, pageViewsScope, sampleNotice } from '../components/ui';
 import { setLastRun, setSamplePill, type ViewContext } from './context';
 
 export async function renderPageViews(ctx: ViewContext, params: URLSearchParams): Promise<void> {
@@ -64,6 +64,7 @@ export async function renderPageViews(ctx: ViewContext, params: URLSearchParams)
       `<button class="btn btn-primary" id="csv" type="button">${ICONS.download}Download CSV</button>`,
     )}
     ${sampleNotice(analyticsHealth.source, isSample)}
+    ${pageViewsScope('monitored')}
     <div class="seg group-tabs" id="group-tabs" role="group" aria-label="Site group"></div>
     <div class="stats" id="pv-stats"></div>
     <section class="card" id="pv-chart-card">

@@ -71,3 +71,10 @@ export function errorState(err: unknown, retryId = 'retry'): string {
 export function notFound(what: string): string {
   return `<section class="card"><div class="empty"><p style="margin:0 0 10px;color:var(--text)">${esc(what)}</p><a class="btn btn-ghost" href="${href.dashboard()}">${ICONS.back}Back to all sites</a></div></section>`;
 }
+
+/** Switch between the monitored sites' page views and every PMW GA4 property. */
+export function pageViewsScope(active: 'monitored' | 'all'): string {
+  const tab = (key: 'monitored' | 'all', label: string, to: string) =>
+    `<a class="${active === key ? 'is-active' : ''}" href="${to}"${active === key ? ' aria-current="page"' : ''}>${label}</a>`;
+  return `<nav class="seg scope-tabs" aria-label="Which sites">${tab('monitored', 'Monitored sites', href.pageViews())}${tab('all', 'All PMW sites', href.allSites())}</nav>`;
+}

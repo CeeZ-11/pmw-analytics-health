@@ -26,4 +26,5 @@ export const analyticsHealth = {
   getSites: () => provider.getSites(),
   getSite: (id: string) => provider.getSite(id),
   getSiteHistory: (id: string, days = 7) => provider.getSiteHistory(id, days),
+  getAllProperties: () => provider.getAllProperties(),
 };

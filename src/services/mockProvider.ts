@@ -2,7 +2,13 @@
  * the n8n API provider implements. A small artificial delay keeps loading
  * states honest during development. */
 
-import { mockHealthSummary, mockHistory, mockSiteDetails, toSummary } from '../mock/generate';
+import {
+  mockAllProperties,
+  mockHealthSummary,
+  mockHistory,
+  mockSiteDetails,
+  toSummary,
+} from '../mock/generate';
 import type { HealthDataProvider } from './provider';
 
 export function createMockProvider({
@@ -19,5 +25,6 @@ export function createMockProvider({
     getSites: () => wait(mockSiteDetails(now()).map(toSummary)),
     getSite: (id) => wait(mockSiteDetails(now()).find((s) => s.id === id) ?? null),
     getSiteHistory: (id, days) => wait(mockHistory(id, clamp(days), now())),
+    getAllProperties: () => wait(mockAllProperties(now())),
   };
 }

@@ -7,7 +7,13 @@
  * TypeError deep inside a render function. They are deliberately not a full
  * schema validator — extra fields are fine and optional ones may be absent. */
 
-import type { HealthSummary, SiteDetail, SiteHistory, SiteSummary } from '../types/health';
+import type {
+  AllPropertiesReport,
+  HealthSummary,
+  SiteDetail,
+  SiteHistory,
+  SiteSummary,
+} from '../types/health';
 import { DataError } from './provider';
 
 type Obj = Record<string, unknown>;
@@ -75,6 +81,22 @@ export function assertSiteDetail(v: unknown): SiteDetail {
   for (const k of ['tracking', 'ga4', 'events', 'conversions', 'issues'])
     need(o, 'site detail', k, 'array');
   return v as SiteDetail;
+}
+
+export function assertAllProperties(v: unknown): AllPropertiesReport {
+  if (!isObj(v)) fail('all properties', 'expected an object');
+  need(v, 'all properties', 'months', 'array');
+  need(v, 'all properties', 'logins', 'array');
+  need(v, 'all properties', 'properties', 'array');
+  const n = (v.months as unknown[]).length;
+  for (const p of v.properties as unknown[]) {
+    if (!isObj(p) || typeof p.id !== 'string' || typeof p.name !== 'string')
+      fail('all properties', 'expected each property to have an id and name');
+    if (!Array.isArray(p.m) || p.m.length !== n || !p.m.every((x) => typeof x === 'number'))
+      fail('all properties', `"m" must hold ${n} monthly numbers for property ${p.id}`);
+    if (!Array.isArray(p.logins)) fail('all properties', '"logins" must be a list');
+  }
+  return v as unknown as AllPropertiesReport;
 }
 
 export function assertHistory(v: unknown): SiteHistory {

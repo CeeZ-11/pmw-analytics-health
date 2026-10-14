@@ -14,3 +14,6 @@ pmw-analytics-health-*.json
 *credentials*.json
 *.pem
 *.p12
+
+# Internal review exports (client data) — never commit
+private/

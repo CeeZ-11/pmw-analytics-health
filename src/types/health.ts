@@ -191,3 +191,37 @@ export interface HealthSummary {
    *  results — the dashboard keeps its "Sample data" labelling. */
   isSample?: boolean;
 }
+
+/* ------------------------------------------------ all PMW GA4 properties */
+
+/** GET /all-properties — every GA4 property the PMW Google logins can see,
+ *  from the latest "all properties review" run in n8n. */
+export interface AllPropertiesReport {
+  generatedAt: string;
+  /** When the review last ran, or null before the first run. */
+  runAt: string | null;
+  /** "YYYY-MM", oldest first: 12 full months, then the current month so far. */
+  months: string[];
+  /** The Google logins that were checked; GaProperty.logins indexes this. */
+  logins: string[];
+  properties: GaProperty[];
+}
+
+export interface GaProperty {
+  /** GA4 property ID. */
+  id: string;
+  account: string;
+  name: string;
+  /** Web stream URL(s), " | "-separated. Empty when there is no web stream. */
+  site: string;
+  /** Measurement IDs of its web streams, " | "-separated. */
+  mids: string;
+  /** Which logins can see it (indexes into AllPropertiesReport.logins). */
+  logins: number[];
+  /** Page views per month, aligned with AllPropertiesReport.months. */
+  m: number[];
+  /** Last month with any page views ("YYYY-MM"), or null. */
+  last: string | null;
+  /** A team decision to count or leave out this property. */
+  team?: { counted: boolean; note: string };
+}

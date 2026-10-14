@@ -35,6 +35,7 @@ export function renderIntegration({ main }: ViewContext): void {
         ${ep(ENDPOINTS.sites(), 'Every monitored site with its per-column check results and issue counts.')}
         ${ep(ENDPOINTS.site('{id}'), 'One site: tracking + GA4 checks, last 24 h totals, expected events/conversions, open issues.')}
         ${ep(ENDPOINTS.siteHistory('{id}', 0).replace(/=0$/, '={N}'), 'Daily users/sessions/events/conversions for N days, plus n8n’s period comparisons.')}
+        ${ep(ENDPOINTS.allProperties(), 'Every GA4 property the PMW Google logins can see, with 13 months of page views (All PMW sites page).')}
       </div>`,
       { sub: 'All read-only. The dashboard never writes to n8n.' },
     )}

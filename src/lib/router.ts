@@ -7,6 +7,7 @@ export type Route =
   | { name: 'site'; id: string; params: URLSearchParams }
   | { name: 'integration'; params: URLSearchParams }
   | { name: 'page-views'; params: URLSearchParams }
+  | { name: 'all-sites'; params: URLSearchParams }
   | { name: 'not-found'; params: URLSearchParams };
 
 export function parseHash(hash: string): Route {
@@ -28,6 +29,7 @@ export function parseHash(hash: string): Route {
     return { name: 'site', id: segs[1], params };
   if (segs[0] === 'integration' && segs.length === 1) return { name: 'integration', params };
   if (segs[0] === 'page-views' && segs.length === 1) return { name: 'page-views', params };
+  if (segs[0] === 'all-sites' && segs.length === 1) return { name: 'all-sites', params };
   return { name: 'not-found', params };
 }
 
@@ -36,6 +38,7 @@ export const href = {
   site: (id: string, params?: URLSearchParams) =>
     `#/sites/${encodeURIComponent(id)}${params && [...params].length ? `?${params}` : ''}`,
   integration: () => '#/integration',
+  allSites: () => '#/all-sites',
   pageViews: (params?: URLSearchParams) =>
     `#/page-views${params && [...params].length ? `?${params}` : ''}`,
 };

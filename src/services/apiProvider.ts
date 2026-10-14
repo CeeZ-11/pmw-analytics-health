@@ -9,7 +9,14 @@ import type { AppConfig } from '../config';
 import type { HealthDataProvider } from './provider';
 import { DataError } from './provider';
 import { ACCESS_HEADER, getAccessKey } from './accessKey';
-import { assertHistory, assertSiteDetail, assertSites, assertSummary, unwrap } from './contract';
+import {
+  assertAllProperties,
+  assertHistory,
+  assertSiteDetail,
+  assertSites,
+  assertSummary,
+  unwrap,
+} from './contract';
 
 /** Every path the dashboard calls, relative to VITE_API_BASE_URL. Keep this
  *  the one place endpoint paths are spelled out. */
@@ -21,6 +28,7 @@ export const ENDPOINTS = {
   site: (id: string) => `/site?id=${encodeURIComponent(id)}`,
   siteHistory: (id: string, days: number) =>
     `/site-history?id=${encodeURIComponent(id)}&days=${encodeURIComponent(String(days))}`,
+  allProperties: () => '/all-properties',
 } as const;
 
 export function createApiProvider(
@@ -91,6 +99,9 @@ export function createApiProvider(
     async getSiteHistory(id, days) {
       const body = await get(ENDPOINTS.siteHistory(id, days), { allow404: true });
       return body == null ? null : assertHistory(body);
+    },
+    async getAllProperties() {
+      return assertAllProperties(await get(ENDPOINTS.allProperties()));
     },
   };
 }

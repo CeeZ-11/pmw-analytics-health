@@ -7,6 +7,7 @@ import { renderDashboard } from './views/dashboard';
 import { renderSiteDetail } from './views/siteDetail';
 import { renderIntegration } from './views/integration';
 import { renderPageViews } from './views/pageViews';
+import { renderAllSites } from './views/allSites';
 import { notFound } from './components/ui';
 import { setAccessKey } from './services/accessKey';
 
@@ -21,7 +22,11 @@ function renderChrome(route: Route) {
     integration: ICONS.plug,
   } as const;
   const section =
-    route.name === 'integration' || route.name === 'page-views' ? route.name : 'dashboard';
+    route.name === 'integration'
+      ? 'integration'
+      : route.name === 'page-views' || route.name === 'all-sites'
+        ? 'page-views'
+        : 'dashboard';
   $$<HTMLAnchorElement>('.rail-btn[data-nav]').forEach((a) => {
     const key = a.dataset.nav as keyof typeof rail;
     if (!a.innerHTML) a.innerHTML = rail[key];
@@ -55,6 +60,9 @@ async function route() {
     case 'page-views':
       document.title = 'Monthly page views · PMW Analytics Health';
       return renderPageViews(ctx, r.params);
+    case 'all-sites':
+      document.title = 'All PMW sites · PMW Analytics Health';
+      return renderAllSites(ctx);
     case 'integration':
       document.title = 'Data source · PMW Analytics Health';
       return renderIntegration(ctx);

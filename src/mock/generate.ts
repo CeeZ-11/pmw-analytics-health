@@ -5,6 +5,8 @@
  * real dashboard views never make these decisions themselves. */
 
 import type {
+  AllPropertiesReport,
+  GaProperty,
   CheckItem,
   CheckResult,
   DailyMetrics,
@@ -328,4 +330,96 @@ export function mockHistory(id: string, days: number, now = new Date()): SiteHis
   if (!s) return null;
   const all = buildDays(s, now);
   return { siteId: id, days: all.slice(-days), periodDays: PERIOD_DAYS, comparisons: compare(all) };
+}
+
+/** Sample "all PMW GA4 properties" report: fictional sites, plus one of each
+ *  case the dashboard's rules handle (roll-up, internal, duplicate, stale,
+ *  no data) so local development shows them all. */
+export function mockAllProperties(now = new Date()): AllPropertiesReport {
+  const y = now.getFullYear();
+  const mo = now.getMonth();
+  const months = Array.from({ length: 13 }, (_, i) =>
+    new Date(Date.UTC(y, mo - 12 + i, 1)).toISOString().slice(0, 7),
+  );
+  const partial = Math.max(0, now.getDate() - 1) / new Date(y, mo + 1, 0).getDate();
+  const series = (seed: string, base: number, until = 13): number[] => {
+    const rand = rng(hashSeed(seed));
+    return months.map((_, i) =>
+      i >= until ? 0 : Math.round(base * (0.8 + rand() * 0.4) * (i === 12 ? partial : 1)),
+    );
+  };
+  const lastWith = (m: number[]) => {
+    const i = m
+      .map((v, k) => (v > 0 ? k : -1))
+      .filter((k) => k >= 0)
+      .pop();
+    return i == null ? null : months[i]!;
+  };
+  const props: GaProperty[] = [];
+  const add = (
+    id: string,
+    account: string,
+    name: string,
+    site: string,
+    base: number,
+    opts: { mids?: string; logins?: number[]; until?: number } = {},
+  ) => {
+    const m = series(id, base, opts.until);
+    props.push({
+      id,
+      account,
+      name,
+      site,
+      mids: opts.mids ?? `G-${id.slice(-6).toUpperCase().padStart(10, 'X')}`,
+      logins: opts.logins ?? [Number(id.slice(-1)) % 4],
+      m,
+      last: lastWith(m),
+    });
+  };
+  MOCK_SITES.forEach((s, i) =>
+    add(
+      `40000${String(i).padStart(4, '0')}`,
+      s.name,
+      `${s.name} - GA4`,
+      `https://www.${s.domain}/`,
+      s.baseUsers * 70,
+    ),
+  );
+  add(
+    '500000001',
+    'Sample Franchise Inc',
+    'Sample Franchise Entire Brand Network - GA4',
+    'https://www.samplefranchise.example/',
+    90000,
+    { mids: 'G-SAMPLE0001 | G-4K79NRW975', logins: [0, 1] },
+  );
+  add('500000002', 'PMW', 'PMW - GA4', 'https://www.propertymanagerwebsites.example/', 12000);
+  add(
+    '500000003',
+    'Harbor Lane Rentals',
+    'harborlanerentals.example - GA4 (old)',
+    'https://harborlanerentals.example',
+    400,
+  );
+  add(
+    '500000004',
+    'Old Mill Realty',
+    'Old Mill Realty - GA4',
+    'https://www.oldmillrealty.example/',
+    2500,
+    { until: 7 },
+  );
+  add('500000005', 'Quiet Pines PM', 'Quiet Pines PM - GA4', 'https://www.quietpines.example/', 0);
+  return {
+    generatedAt: now.toISOString(),
+    runAt: lastRunTime(now).toISOString(),
+    months,
+    logins: [
+      'sample.login1@example.com',
+      'sample.login2@example.com',
+      'sample.login3@example.com',
+      'sample.login4@example.com',
+    ],
+    properties: props,
+  };
 }

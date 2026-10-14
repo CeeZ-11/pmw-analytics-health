@@ -226,6 +226,42 @@ Everything in `SiteSummary`, plus:
 
 ---
 
+## `GET /all-properties`
+
+Every GA4 property the PMW Google logins can see, from the latest run of the
+**PMW — All GA4 properties: page views review** workflow (data table
+`pmw_all_properties`). One entry per property, merged across logins. Powers the
+**All PMW sites** page (`#/all-sites`).
+
+```json
+{
+  "generatedAt": "2026-10-15T01:00:00.000Z",
+  "runAt": "2026-10-14T18:30:48.699-04:00",
+  "months": ["2025-10", "…", "2026-09", "2026-10"],
+  "logins": ["pmw.webmaster@kohva.com", "…"],
+  "properties": [
+    {
+      "id": "328440990",
+      "account": "Aim Properties",
+      "name": "Aim Properties - GA4",
+      "site": "https://www.aimpropertiesnm.com",
+      "mids": "G-8LJKL9CTJ6",
+      "logins": [0, 1, 2, 3],
+      "m": [2149, 1773, 1979, 2451, 2276, 2336, 2267, 2643, 2246, 2484, 2603, 2944, 1470],
+      "last": "2026-10",
+      "team": { "counted": false, "note": "optional — from pmw_all_properties_overrides" }
+    }
+  ]
+}
+```
+
+`months` is 12 full months then the current month so far; `m` lines up with it.
+The dashboard decides what counts (`src/lib/allProperties.ts`): duplicate
+websites, PMI's roll-up property, non-client accounts (Rentvine, PMW, Testing
+Sandbox) and properties with no page views are left out by default. A row in
+`pmw_all_properties_overrides` (`propertyId`, `counted`, `note`) is a team
+decision that overrides those rules for everyone.
+
 ## Security
 
 - **Team access key.** All four endpoints use n8n Header Auth (credential

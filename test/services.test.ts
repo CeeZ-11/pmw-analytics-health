@@ -3,6 +3,7 @@ import { readConfig } from '../src/config';
 import { createApiProvider, ENDPOINTS } from '../src/services/apiProvider';
 import { createMockProvider } from '../src/services/mockProvider';
 import {
+  assertAllProperties,
   assertHistory,
   assertSiteDetail,
   assertSites,
@@ -45,6 +46,14 @@ describe('mock provider matches the n8n contract', () => {
       const h = await mock.getSiteHistory(s.id, 7);
       assertHistory(h);
     }
+  });
+
+  it('all-properties report passes the contract guard, and bad shapes fail it', async () => {
+    const r = assertAllProperties(await mock.getAllProperties());
+    expect(r.properties.length).toBeGreaterThan(20);
+    expect(ENDPOINTS.allProperties()).toBe('/all-properties');
+    const broken = { ...r, properties: [{ ...r.properties[0], m: [1, 2] }] };
+    expect(() => assertAllProperties(broken)).toThrow(/monthly numbers/);
   });
 
   it('summary rows omit detail-only fields', async () => {
