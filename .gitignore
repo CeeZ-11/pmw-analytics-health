@@ -2,8 +2,8 @@ node_modules/
 dist/
 coverage/
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 .DS_Store
 *.log
 
@@ -14,6 +14,12 @@ pmw-analytics-health-*.json
 *credentials*.json
 *.pem
 *.p12
+*.key
+client_secret*.json
+
+# Exports and dumps (may contain client data)
+*.csv
+*.xlsx
 
 # Internal review exports (client data) — never commit
 private/

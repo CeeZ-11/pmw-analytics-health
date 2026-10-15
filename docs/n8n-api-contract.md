@@ -240,16 +240,16 @@ Every GA4 property the PMW Google logins can see, from the latest run of the
   "generatedAt": "2026-10-15T01:00:00.000Z",
   "runAt": "2026-10-14T18:30:48.699-04:00",
   "months": ["2025-10", "…", "2026-09", "2026-10"],
-  "logins": ["pmw.webmaster@kohva.com", "…"],
+  "logins": ["login-1@example.com", "…"],
   "properties": [
     {
-      "id": "328440990",
-      "account": "Aim Properties",
-      "name": "Aim Properties - GA4",
-      "site": "https://www.aimpropertiesnm.com",
-      "mids": "G-8LJKL9CTJ6",
-      "logins": [0, 1, 2, 3],
-      "m": [2149, 1773, 1979, 2451, 2276, 2336, 2267, 2643, 2246, 2484, 2603, 2944, 1470],
+      "id": "400012345",
+      "account": "Harbor Lane Rentals",
+      "name": "Harbor Lane Rentals - GA4",
+      "site": "https://www.harborlanerentals.example",
+      "mids": "G-XXXXXXXXXX",
+      "logins": [0, 1],
+      "m": [2100, 1800, 1950, 2400, 2250, 2300, 2250, 2600, 2200, 2450, 2600, 2900, 1450],
       "last": "2026-10",
       "team": { "counted": false, "note": "optional — from pmw_all_properties_overrides" }
     }
@@ -279,8 +279,8 @@ decision that overrides those rules for everyone.
   only from the site, network requests only to the site and the n8n origin.
 - **CORS** limits browser reads to `https://ceez-11.github.io` and localhost.
 - **GA4 access** goes through the shared PMW Google logins
-  (pmw.webmaster@kohva.com by default; a site's `ga4Login` column picks
-  pmw.analytics@kohva.com, pmw.analytics1/2@rentvine.com or `service-account`),
+  (the default login unless a site's `ga4Login` column names another PMW
+  login or `service-account`; the logins are listed in n8n, not here),
   each connected in n8n with only the `analytics.readonly` scope. The OAuth
   app lives in the `pmw-analytics-health` Google Cloud project and must be
   published ("In production"), or Google expires the sign-ins after 7 days.

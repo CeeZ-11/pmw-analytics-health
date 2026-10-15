@@ -369,7 +369,7 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now, monthly) {
         'analytics',
         'critical',
         'GA4 property inaccessible',
-        `The monitor can't read GA4 property ${inv.ga4PropertyId} with ${inv.ga4Login || 'pmw.webmaster@kohva.com'} (${ga4Err}). Give that login Viewer access in GA4 → Admin → Property access management, or set the site's ga4Login to a PMW login that can see it.`,
+        `The monitor can't read GA4 property ${inv.ga4PropertyId} with ${inv.ga4Login || 'the default PMW login'} (${ga4Err}). Give that login Viewer access in GA4 → Admin → Property access management, or set the site's ga4Login to a PMW login that can see it.`,
       );
     else
       issue(
