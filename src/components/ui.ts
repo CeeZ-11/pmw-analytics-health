@@ -31,6 +31,13 @@ export function sampleNotice(source: 'mock' | 'api', isSample = false): string {
   return `<div class="sample-note" role="note">${ICONS.info}<span><b>Sample data.</b> Sites, IDs and numbers are fictional — ${source === 'mock' ? 'the dashboard isn\u2019t connected to n8n yet.' : 'n8n is serving seed data until the monitoring workflow runs.'}</span><a href="${href.integration()}">How to connect →</a></div>`;
 }
 
+/** Explains sites whose GA4 data the monitor can't read (tagChecksOnly). */
+export function tagOnlyNotice(count: number, what = 'GA4 data'): string {
+  if (!count) return '';
+  const lead = count === 1 ? 'This site is' : `${count} sites are`;
+  return `<div class="sample-note" role="note">${ICONS.info}<span><b>${lead} on tag checks only.</b> Reading ${esc(what)} for ${count === 1 ? 'it' : 'them'} needs admin approval: a Google Workspace admin must trust the monitor, or the GA4 account’s admin must add it. The website tag checks (GA4 tag, GTM, measurement ID) still run daily.</span></div>`;
+}
+
 export function loading(blocks: number[] = [88, 320]): string {
   return (
     blocks

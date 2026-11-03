@@ -87,6 +87,9 @@ export interface SiteSummary extends SiteInventory {
   /** GA4 page views per calendar month, oldest first: the last 12 full months
    *  plus the current month so far. Null/absent when GA4 couldn't be read. */
   pageViewsByMonth?: MonthlyPageViews[] | null;
+  /** True when no PMW login can read this site's GA4 account: only the website
+   *  (tag) checks run, and GA4 data needs admin approval. */
+  tagChecksOnly?: boolean;
   /** True for seed/sample rows served by n8n before real monitoring runs. */
   isSample?: boolean;
 }

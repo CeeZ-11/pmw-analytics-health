@@ -345,7 +345,20 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now, monthly) {
   let convItems = expectedConversions.map((name) => ({ name, result: 'unknown', count24h: null }));
   const ga4Err = errText(daily);
   const conversionsConfigured = expectedConversions.length > 0;
-  if (!inv.ga4PropertyId) {
+  // ga4Login "tag-only": no PMW login can read this GA4 account, so only the
+  // website checks run and GA4 data is reported as "needs admin approval".
+  const tagOnly =
+    String(inv.ga4Login || '')
+      .trim()
+      .toLowerCase() === 'tag-only';
+  if (tagOnly) {
+    for (const k of ['property_access', 'recent_data', 'events', 'conversions'])
+      g[k] = {
+        result: 'unknown',
+        detail:
+          'Tag checks only — reading GA4 data for this site needs admin approval (a Google Workspace admin must trust the monitor, or the GA4 account admin must add it).',
+      };
+  } else if (!inv.ga4PropertyId) {
     for (const k of ['property_access', 'recent_data', 'events', 'conversions'])
       g[k] = { result: 'unknown', detail: 'No GA4 property in the inventory for this site.' };
     issue(
@@ -608,8 +621,9 @@ function analyseSite(inv, home, gtm, prop, daily, evs, now, monthly) {
     },
     issueCategories: uniq(issues.map((i) => i.category)),
     hasConversionIssue: issues.some((i) => /conversion/.test(i.code)),
+    tagChecksOnly: tagOnly,
     pageViewsByMonth:
-      inv.ga4PropertyId && !ga4Err && daily
+      !tagOnly && inv.ga4PropertyId && !ga4Err && daily
         ? buildMonths(monthly, (prop && prop.timeZone) || 'America/Los_Angeles', now)
         : null,
     isSample: false,

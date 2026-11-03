@@ -24,7 +24,14 @@ import {
 } from '../lib/filters';
 import { href, replaceHash } from '../lib/router';
 import { checkIcon, STATUS_META, statusBadge } from '../lib/status';
-import { errorState, initials, loading, pageHead, sampleNotice } from '../components/ui';
+import {
+  errorState,
+  initials,
+  loading,
+  pageHead,
+  sampleNotice,
+  tagOnlyNotice,
+} from '../components/ui';
 import { setLastRun, setSamplePill, type ViewContext } from './context';
 
 interface DashData {
@@ -76,6 +83,7 @@ function paint(ctx: ViewContext, data: DashData, query: SiteQuery) {
       `<button class="btn btn-ghost" id="refresh" title="Reload results from ${analyticsHealth.source === 'mock' ? 'sample data' : 'n8n'}">${ICONS.refresh}Refresh</button>`,
     )}
     ${sampleNotice(analyticsHealth.source, !!summary.isSample)}
+    <div id="tag-note"></div>
     <div class="seg group-tabs" id="group-tabs" role="group" aria-label="Site group"></div>
     <div class="stats" id="stats"></div>
     <div id="dist"></div>
@@ -121,6 +129,7 @@ function paint(ctx: ViewContext, data: DashData, query: SiteQuery) {
     renderStats(counts, state);
     $('#dist')!.innerHTML = distribution(counts);
     renderChips(scoped, state);
+    $('#tag-note')!.innerHTML = tagOnlyNotice(scoped.filter((s) => s.tagChecksOnly).length);
     renderRows(data, scoped, state);
   };
 
@@ -267,6 +276,15 @@ function issuePills(s: SiteSummary): string {
   return `<span class="issue-pills">${critical ? `<span class="pill poor">${critical} critical</span>` : ''}${warning ? `<span class="pill warn">${warning} warning</span>` : ''}</span>`;
 }
 
+const TAG_ONLY_TITLE = 'GA4 data needs admin approval';
+
+/** GA4 data cells: a muted dash for tag-only sites instead of "unknown". */
+function gaCell(s: SiteSummary, result: SiteSummary['checks']['data'], label: string): string {
+  if (!s.tagChecksOnly) return checkIcon(result, label);
+  const text = `${label}: ${TAG_ONLY_TITLE}`;
+  return `<span class="c-muted" role="img" aria-label="${esc(text)}" title="${esc(text)}">—</span>`;
+}
+
 function renderRows({ sites: all }: DashData, sites: SiteSummary[], state: SiteQuery) {
   const rows = applyQuery(all, state);
   $('#count')!.textContent =
@@ -286,12 +304,12 @@ function renderRows({ sites: all }: DashData, sites: SiteSummary[], state: SiteQ
                   .map((g) => ` <span class="pill muted">${esc(groupLabel(g))}</span>`)
                   .join('')
               : ''
-          }</div></div></div></td>
+          }${s.tagChecksOnly ? ` <span class="pill muted" title="${esc(TAG_ONLY_TITLE)}">Tag checks only</span>` : ''}</div></div></div></td>
         <td class="c">${checkIcon(s.checks.ga4, 'GA4')}</td>
         <td class="c">${checkIcon(s.checks.gtm, 'GTM')}</td>
-        <td class="c">${checkIcon(s.checks.data, 'Data')}</td>
-        <td class="c">${checkIcon(s.checks.events, 'Events')}</td>
-        <td class="c">${checkIcon(s.checks.conversions, 'Conversions')}</td>
+        <td class="c">${gaCell(s, s.checks.data, 'Data')}</td>
+        <td class="c">${gaCell(s, s.checks.events, 'Events')}</td>
+        <td class="c">${gaCell(s, s.checks.conversions, 'Conversions')}</td>
         <td>${issuePills(s)}</td>
         <td class="dim" title="${esc(fmtDateTime(s.lastChecked))}">${esc(fmtRelative(s.lastChecked))}</td>
         <td>${statusBadge(s.status)}</td>

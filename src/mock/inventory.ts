@@ -19,7 +19,8 @@ export type Scenario =
   | 'traffic_drop'
   | 'event_drop'
   | 'duplicate_tracking'
-  | 'crawl_timeout';
+  | 'crawl_timeout'
+  | 'tag_only';
 
 export interface MockSite extends SiteInventory {
   scenario: Scenario;
@@ -126,7 +127,7 @@ export const MOCK_SITES: MockSite[] = [
     'property_inaccessible',
     400,
   ),
-  site('keystone', 'Keystone Property Co.', 'keystoneproperty.example', 11, 'healthy', 510),
+  site('keystone', 'Keystone Property Co.', 'keystoneproperty.example', 11, 'tag_only', 510),
   site('lakeshore', 'Lakeshore Residential', 'lakeshoreres.example', 12, 'traffic_drop', 930, true),
   site('granite-peak', 'Granite Peak PM', 'granitepeakpm.example', 13, 'healthy', 260),
   site(
@@ -170,6 +171,8 @@ export interface ScenarioSpec {
   missingConversions?: string[];
   /** GA4 couldn't be queried at all → no numbers, no history. */
   noGa4Data?: boolean;
+  /** No PMW login can read GA4: only website checks run (tagChecksOnly). */
+  tagChecksOnly?: boolean;
   /** Multipliers applied to the most recent `days` of history. */
   history?: {
     days: number;

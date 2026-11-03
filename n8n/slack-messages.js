@@ -87,6 +87,9 @@ function buildSlackMessages(currentRows, previousRows, now) {
     let text =
       `*PMW Analytics Health · ${groupLabel(g)} — ${date}*\n` +
       `${sites.length} sites · ${icon.healthy} ${counts.healthy} healthy · ${icon.warning} ${counts.warning} warning · ${icon.critical} ${counts.critical} critical`;
+    const tagOnly = sites.filter((s) => s.d.tagChecksOnly).length;
+    if (tagOnly)
+      text += `\n:information_source: ${tagOnly} site${tagOnly === 1 ? '' : 's'} on tag checks only — GA4 data needs admin approval.`;
     if (lines.length) text += `\n\n*Needs attention*\n${lines.join('\n')}`;
     if (healthy.length && healthy.length <= MAX_LISTED)
       text += `\n\n*Healthy:* ${healthy.join(', ')}`;

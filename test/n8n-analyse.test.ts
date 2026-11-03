@@ -275,6 +275,30 @@ describe('n8n analyse-site', () => {
     expect(i.title).toContain('form_submission');
     expect(i.id).toBe('test-site-expected_conversion_missing-form_submission');
   });
+
+  it('tag-only sites run the website checks but raise no GA4 issues', () => {
+    const row = analyseSite(
+      { ...inv, ga4Login: 'tag-only' },
+      home,
+      gtm,
+      null,
+      null,
+      null,
+      NOW,
+      null,
+    );
+    const summary = JSON.parse(row.summaryJson);
+    const detail = JSON.parse(row.detailJson);
+    assertSiteSummary(summary);
+    assertSiteDetail(detail);
+    expect(row.status).toBe('healthy');
+    expect(detail.issues).toEqual([]);
+    expect(summary.tagChecksOnly).toBe(true);
+    expect(summary.pageViewsByMonth).toBeNull();
+    expect(summary.checks).toMatchObject({ ga4: 'pass', gtm: 'pass', data: 'unknown' });
+    expect(detail.ga4[0].detail).toContain('admin approval');
+    expect(run().summary.tagChecksOnly).toBe(false);
+  });
 });
 
 const slackSrc = readFileSync(resolve(process.cwd(), 'n8n/slack-messages.js'), 'utf8').split(
@@ -325,5 +349,21 @@ describe('n8n slack messages', () => {
     const [msg] = buildSlackMessages(many, [], NOW);
     expect(msg!.match(/:large_yellow_circle: </g)).toHaveLength(15);
     expect(msg).toContain('and 25 more');
+  });
+
+  it('counts tag-only sites in the group summary', () => {
+    const t = analyseSite(
+      { ...inv, siteId: 't1', siteGroup: 'pmi', ga4Login: 'tag-only' },
+      home,
+      gtm,
+      null,
+      null,
+      null,
+      NOW,
+      null,
+    );
+    const [msg] = buildSlackMessages([t, site(1, 'pmi')], [], NOW);
+    expect(msg).toContain('1 site on tag checks only — GA4 data needs admin approval.');
+    expect(buildSlackMessages([site(1, 'pmi')], [], NOW)[0]).not.toContain('tag checks only');
   });
 });

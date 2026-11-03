@@ -18,7 +18,15 @@ import { href, replaceHash } from '../lib/router';
 import { CHECK_META, checkIcon, severityPill, STATUS_META, statusBadge } from '../lib/status';
 import { renderChart } from '../lib/chart';
 import { groupLabel, siteGroups } from '../lib/filters';
-import { card, errorState, initials, loading, notFound, sampleNotice } from '../components/ui';
+import {
+  card,
+  errorState,
+  initials,
+  loading,
+  notFound,
+  sampleNotice,
+  tagOnlyNotice,
+} from '../components/ui';
 import { dashboardHref } from './dashboard';
 import { setSamplePill, type ViewContext } from './context';
 
@@ -88,6 +96,7 @@ export async function renderSiteDetail(
       </div>
     </header>
     ${sampleNotice(analyticsHealth.source, !!s.isSample)}
+    ${s.tagChecksOnly ? tagOnlyNotice(1) : ''}
     <div class="verdict ${meta.tone}">${statusBadge(s.status)}<div><div class="verdict-t">${esc(verdictText(s))}</div><div class="verdict-d">${esc(meta.description)}</div></div></div>
     <div class="detail-grid">
       <div class="detail-main">

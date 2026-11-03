@@ -107,6 +107,21 @@ export const SCENARIOS: Record<Scenario, ScenarioSpec> = {
     ],
   },
 
+  tag_only: {
+    ga4: {
+      property_access: {
+        result: 'unknown',
+        detail: 'Tag checks only — reading GA4 data for this site needs admin approval.',
+      },
+      recent_data: { result: 'unknown', detail: 'Not checked — tag checks only.' },
+      events: { result: 'unknown' },
+      conversions: { result: 'unknown' },
+    },
+    noGa4Data: true,
+    tagChecksOnly: true,
+    issues: [],
+  },
+
   no_recent_data: {
     ga4: {
       recent_data: { result: 'fail', detail: '0 sessions recorded since yesterday 00:00.' },

@@ -280,6 +280,7 @@ function buildDetail(s: MockSite, index: number, now: Date): SiteDetail {
     },
     issueCategories,
     hasConversionIssue: issues.some((x) => /conversion/.test(x.code)),
+    tagChecksOnly: !!spec.tagChecksOnly,
     pageViewsByMonth: buildMonths(s, now),
     tracking,
     ga4,

@@ -138,6 +138,10 @@ Optional fields:
 
 - `groups` — every portfolio the site is in (`["elite", "pmi"]`); `group` is
   the first one. The inventory's `siteGroup` takes a comma list.
+- `tagChecksOnly` — `true` when no PMW login can read the site's GA4 account
+  (inventory `ga4Login` = `tag-only`). Only the website checks run; the GA4
+  checks are `unknown` with a "needs admin approval" detail, raise no issues,
+  and `pageViewsByMonth` is null.
 - `pageViewsByMonth` — GA4 page views (`screenPageViews`) per calendar month,
   oldest first: the last 12 full months plus the current month so far, e.g.
   `[{ "month": "2025-10", "pageViews": 3900 }, …]`. `null` when GA4 couldn't be
@@ -280,13 +284,14 @@ decision that overrides those rules for everyone.
 - **CORS** limits browser reads to `https://ceez-11.github.io` and localhost.
 - **GA4 access** goes through the shared PMW Google logins
   (the default login unless a site's `ga4Login` column names another PMW
-  login or `service-account`; the logins are listed in n8n, not here),
+  login, `service-account`, `service-account-2`, or `tag-only` to skip GA4;
+  the logins are listed in n8n, not here),
   each connected in n8n with only the `analytics.readonly` scope. The OAuth
   app lives in the `pmw-analytics-health` Google Cloud project and must be
   published ("In production"), or Google expires the sign-ins after 7 days.
 - **Logs:** the Dashboard API saves no execution data on success; the daily
   monitor posts to Slack if a run fails.
-- **Slack** channel `#pmw-analytics-monitor` is private.
+- **Slack** posts go to the public channel `#pmw-analytics-health`, sent by the "PMW Analytics Health" Slack app (bot token, `chat:write` only; n8n credential "Slack – PMW Analytics Health bot").
 
 ## Suggested n8n layout
 
